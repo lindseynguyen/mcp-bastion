@@ -45,7 +45,7 @@ pipx install semgrep                   # optional: code rules (keep it in its ow
 pip install "mcp-bastion[ml]"          # optional: LLM Guard classifier (~2 GB)
 ```
 
-Until the first PyPI release: `pip install "git+https://github.com/lindseynguyen/mcp-bastion#egg=mcp-bastion[engines]"`.
+Until the first PyPI release: `pip install "mcp-bastion[engines] @ git+https://github.com/lindseynguyen/mcp-bastion@v0.2.0"`.
 
 ## Use
 
