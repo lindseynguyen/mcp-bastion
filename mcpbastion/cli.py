@@ -78,6 +78,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):      # Windows consoles default to cp1252
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     argv = list(sys.argv[1:] if argv is None else argv)
     known = {"scan", "inspect", "discover", "rules", "engines", "-h", "--help", "--version"}
     if not argv or argv[0] not in known:

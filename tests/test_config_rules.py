@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 from conftest import rule_ids
 
 from mcpbastion.models import ServerConfig, Severity
@@ -97,6 +99,7 @@ def test_cross_client_divergence():
     assert not check_cross_client([a, ServerConfig("gh", "vscode", "b", command="npx", args=["gh-mcp@1.0.0"])])
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permissions")
 def test_file_permissions(tmp_path):
     p = tmp_path / "c.json"
     p.write_text("{}")

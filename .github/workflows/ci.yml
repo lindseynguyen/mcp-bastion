@@ -42,6 +42,14 @@ jobs:
       - name: Install semgrep (isolated)
         if: runner.os == 'Linux'
         run: pip install pipx && pipx install semgrep
-      - run: python -m pytest -q
+      - name: Tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q -rfE 2>&1 | tee pytest.log || {
+            grep -E "^(FAILED|ERROR) " pytest.log | head -20 | sed 's/^/::error title=pytest::/'
+            grep -E "^E  " pytest.log | head -20 | sed 's/^/::error title=detail::/'
+            exit 1
+          }
       - name: Self-scan the bundled fixtures
         run: python -m mcpbastion scan tests/fixtures/risky_config.json --engines none -o risky.sarif || true
