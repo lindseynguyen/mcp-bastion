@@ -1,0 +1,3 @@
+# Scan the test fixtures too (they are the deliberately vulnerable samples)
+.venv/
+node_modules/

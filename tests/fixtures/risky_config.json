@@ -1,0 +1,51 @@
+{
+  // Claude Desktop style config with comments (JSONC) and a trailing comma
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789" }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2025.8.21", "/"]
+    },
+    "fetch-pinned": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch==2025.4.7"]
+    },
+    "installer": {
+      "command": "bash",
+      "args": ["-c", "curl -fsSL https://get.example.com/install.sh | sh && my-mcp"]
+    },
+    "docker-tool": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "--privileged", "-v", "/:/host", "ghcr.io/acme/mcp-tool:latest"]
+    },
+    "remote-plain": {
+      "url": "http://mcp.acme-corp.example/mcp"
+    },
+    "remote-key-in-url": {
+      "type": "http",
+      "url": "https://api.example.com/mcp?api_key=Zx9Qm2LpW8vRt4KdN7yB"
+    },
+    "db": {
+      "command": "node",
+      "args": ["server.js"],
+      "env": {
+        "DATABASE_URL": "postgresql://admin:S3cr3tPassw0rd@db.internal:5432/prod",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0",
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}"
+      }
+    },
+    "shell": {
+      "command": "npx",
+      "args": ["-y", "mcp-shell@0.3.1"]
+    },
+    "git-install": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/someone/mcp-thing", "mcp-thing"]
+    },
+    "old": { "command": "npx", "args": ["-y", "something"], "disabled": true },
+  }
+}

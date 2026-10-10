@@ -1,0 +1,38 @@
+# mcp-bastion policy example — copy to your repo and pass with --policy
+#
+# fail_on: exit code 1 when any finding reaches this severity
+fail_on: high
+
+# Only these servers / packages are approved. Anything else → MB403.
+# Leave both lists empty to disable the allow-list.
+allowed_servers:
+  - filesystem
+  - github
+  - internal-*
+allowed_packages:
+  - "@modelcontextprotocol/*"
+  - mcp-server-fetch
+  - ghcr.io/github/github-mcp-server
+
+# Never allowed → MB404 (critical)
+blocked_packages:
+  - "*-free-mcp*"
+  - "*crack*"
+blocked_urls:
+  - "*ngrok*"
+  - "*webhook.site*"
+
+# Tune severities for your environment
+severity_overrides:
+  MB202: info          # npx -y is accepted practice here
+
+# Accepted risks (each entry: rule / server / location; glob patterns)
+ignore:
+  - rule: MB402
+    server: "internal-*"
+    reason: "Auth enforced by the LiteLLM gateway in front of these servers"
+
+# Extra phrases that must never appear in tool metadata
+extra_injection_patterns:
+  - "(?i)forward .* to .*@"
+  - "(?i)chuyển tiếp .* cho"

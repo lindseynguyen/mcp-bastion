@@ -1,0 +1,83 @@
+name: "MCP Bastion"
+description: "Scan MCP server configs and tools for poisoning, secrets, supply-chain and code risks; upload SARIF to code scanning"
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  paths:
+    description: "Space-separated MCP config files or folders to scan"
+    default: ".mcp.json .vscode/mcp.json .cursor/mcp.json"
+  live:
+    description: "Start servers and analyse their tools (true/false)"
+    default: "false"
+  online:
+    description: "Allow OSV vulnerability / malicious-package lookups"
+    default: "true"
+  lock:
+    description: "Tool pin file for rug-pull detection (commit it to the repo)"
+    default: ""
+  policy:
+    description: "Policy file (YAML/JSON)"
+    default: ""
+  source:
+    description: "Server source folders to scan with semgrep/bandit/detect-secrets (space-separated)"
+    default: ""
+  fail-on:
+    description: "Fail the job at this severity (critical, high, medium, low, info)"
+    default: "high"
+  sarif:
+    description: "Path of the SARIF report"
+    default: "mcp-bastion.sarif"
+  upload-sarif:
+    description: "Upload SARIF to GitHub code scanning (needs security-events: write)"
+    default: "true"
+
+outputs:
+  sarif:
+    description: "Path to the SARIF report"
+    value: ${{ inputs.sarif }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install mcp-bastion and engines
+      shell: bash
+      run: |
+        python -m pip install --quiet "${{ github.action_path }}[engines]"
+        python -m pip install --quiet pipx && pipx install semgrep >/dev/null 2>&1 || true
+    - name: Scan
+      id: scan
+      shell: bash
+      run: |
+        args=()
+        for p in ${{ inputs.paths }}; do [ -e "$p" ] && args+=("$p"); done
+        if [ ${#args[@]} -eq 0 ]; then echo "No MCP config found in: ${{ inputs.paths }}"; exit 0; fi
+        [ "${{ inputs.live }}" = "true" ] && args+=(--live)
+        [ "${{ inputs.online }}" = "true" ] && args+=(--online)
+        [ -n "${{ inputs.lock }}" ] && args+=(--lock "${{ inputs.lock }}")
+        [ -n "${{ inputs.policy }}" ] && args+=(--policy "${{ inputs.policy }}")
+        for s in ${{ inputs.source }}; do args+=(--source "$s"); done
+        set +e
+        mcp-bastion scan "${args[@]}" --fail-on "${{ inputs.fail-on }}" \
+          -o "${{ inputs.sarif }}" -o mcp-bastion.md
+        code=$?
+        set -e
+        [ -f mcp-bastion.md ] && cat mcp-bastion.md >> "$GITHUB_STEP_SUMMARY"
+        echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+    - name: Upload SARIF
+      if: always() && inputs.upload-sarif == 'true' && hashFiles(inputs.sarif) != ''
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif }}
+        category: mcp-bastion
+    - name: Enforce threshold
+      shell: bash
+      run: |
+        if [ "${{ steps.scan.outputs.exit_code }}" = "1" ]; then
+          echo "::error::mcp-bastion found issues at or above '${{ inputs.fail-on }}'"; exit 1
+        fi
+        [ "${{ steps.scan.outputs.exit_code }}" = "2" ] && { echo "::error::mcp-bastion failed"; exit 1; } || true

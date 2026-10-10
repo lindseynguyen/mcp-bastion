@@ -1,0 +1,181 @@
+rules:
+  # ---------------------------------------------------------------- Python
+  - id: mcp-py-subprocess-shell
+    languages: [python]
+    severity: ERROR
+    message: subprocess called with shell=True - tool arguments reaching this call give the model (or an attacker controlling its input) shell access.
+    pattern-either:
+      - pattern: subprocess.$F(..., shell=True, ...)
+      - pattern: asyncio.create_subprocess_shell(...)
+
+  - id: mcp-py-os-system
+    languages: [python]
+    severity: ERROR
+    message: os.system/os.popen with a non-constant command enables command injection.
+    patterns:
+      - pattern-either:
+          - pattern: os.system($X)
+          - pattern: os.popen($X, ...)
+      - pattern-not: os.system("...")
+      - pattern-not: os.popen("...", ...)
+
+  - id: mcp-py-eval-exec
+    languages: [python]
+    severity: ERROR
+    message: eval/exec on non-constant input executes arbitrary code.
+    patterns:
+      - pattern-either:
+          - pattern: eval($X, ...)
+          - pattern: exec($X, ...)
+      - pattern-not: eval("...", ...)
+      - pattern-not: exec("...", ...)
+
+  - id: mcp-py-unsafe-deserialization
+    languages: [python]
+    severity: ERROR
+    message: Unsafe deserialization (pickle / yaml.load without SafeLoader) can execute code.
+    pattern-either:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+      - pattern: dill.loads(...)
+      - pattern: yaml.load($X)
+      - pattern: yaml.load($X, Loader=yaml.Loader)
+      - pattern: yaml.load($X, Loader=yaml.UnsafeLoader)
+
+  - id: mcp-py-tool-path-traversal
+    languages: [python]
+    severity: WARNING
+    message: An MCP tool opens a path taken straight from its arguments. Resolve it and check it stays inside an allowed root (path traversal).
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              @$S.tool(...)
+              def $F(..., $P, ...):
+                ...
+          - pattern-inside: |
+              @$S.tool(...)
+              async def $F(..., $P, ...):
+                ...
+          - pattern-inside: |
+              @$S.tool
+              def $F(..., $P, ...):
+                ...
+          - pattern-inside: |
+              @$S.tool
+              async def $F(..., $P, ...):
+                ...
+      - pattern-either:
+          - pattern: open($P, ...)
+          - pattern: pathlib.Path($P)
+          - pattern: Path($P)
+          - pattern: os.remove($P)
+          - pattern: shutil.rmtree($P)
+
+  - id: mcp-py-tool-ssrf
+    languages: [python]
+    severity: WARNING
+    message: An MCP tool requests a URL taken from its arguments (SSRF). Restrict schemes and block internal / metadata addresses.
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              @$S.tool(...)
+              def $F(..., $P, ...):
+                ...
+          - pattern-inside: |
+              @$S.tool(...)
+              async def $F(..., $P, ...):
+                ...
+          - pattern-inside: |
+              @$S.tool
+              def $F(..., $P, ...):
+                ...
+          - pattern-inside: |
+              @$S.tool
+              async def $F(..., $P, ...):
+                ...
+      - pattern-either:
+          - pattern: requests.$M($P, ...)
+          - pattern: httpx.$M($P, ...)
+          - pattern: urllib.request.urlopen($P, ...)
+          - pattern: $CLIENT.get($P, ...)
+          - pattern: $CLIENT.post($P, ...)
+      - metavariable-regex:
+          metavariable: $P
+          regex: (?i).*(url|uri|link|endpoint|host|address|target).*
+
+  - id: mcp-py-sql-injection
+    languages: [python]
+    severity: ERROR
+    message: SQL built with string formatting - use parameterised queries.
+    pattern-either:
+      - pattern: $C.execute(f"...", ...)
+      - pattern: $C.execute("..." % $X, ...)
+      - pattern: $C.execute("..." + $X, ...)
+      - pattern: $C.execute($Q.format(...), ...)
+      - pattern: $C.executescript($X)
+
+  - id: mcp-py-tls-verify-off
+    languages: [python]
+    severity: WARNING
+    message: TLS certificate verification disabled.
+    pattern-either:
+      - pattern: requests.$M(..., verify=False, ...)
+      - pattern: httpx.$M(..., verify=False, ...)
+      - pattern: httpx.Client(..., verify=False, ...)
+      - pattern: httpx.AsyncClient(..., verify=False, ...)
+      - pattern: ssl._create_unverified_context(...)
+
+  - id: mcp-py-bind-all-interfaces
+    languages: [python]
+    severity: WARNING
+    message: Server listens on all interfaces; an HTTP MCP server without auth becomes reachable from the network.
+    pattern-either:
+      - pattern: $APP.run(..., host="0.0.0.0", ...)
+      - pattern: uvicorn.run(..., host="0.0.0.0", ...)
+
+  # ---------------------------------------------------------------- JavaScript / TypeScript
+  - id: mcp-js-child-process-exec
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: child_process exec/execSync with a dynamic command string enables command injection; use execFile/spawn with an argument array.
+    patterns:
+      - pattern-either:
+          - pattern: $CP.exec(`...${$X}...`, ...)
+          - pattern: $CP.execSync(`...${$X}...`, ...)
+          - pattern: $CP.exec($A + $B, ...)
+          - pattern: $CP.execSync($A + $B, ...)
+          - pattern: exec(`...${$X}...`, ...)
+          - pattern: execSync(`...${$X}...`, ...)
+          - pattern: exec($A + $B, ...)
+          - pattern: execSync($A + $B, ...)
+          - pattern: '$CP.spawn($CMD, $ARGS, {..., shell: true, ...})'
+
+  - id: mcp-js-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: eval / new Function on dynamic input executes arbitrary code.
+    patterns:
+      - pattern-either:
+          - pattern: eval($X)
+          - pattern: new Function(...)
+          - pattern: vm.runInNewContext($X, ...)
+          - pattern: vm.runInThisContext($X, ...)
+      - pattern-not: eval("...")
+
+  - id: mcp-js-tls-reject-off
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: TLS certificate verification disabled.
+    pattern-either:
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+      - pattern: '{..., rejectUnauthorized: false, ...}'
+
+  - id: mcp-js-sql-template
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: SQL built with a template string - use parameterised queries.
+    patterns:
+      - pattern-either:
+          - pattern: $DB.query(`...${$X}...`, ...)
+          - pattern: $DB.execute(`...${$X}...`, ...)
+          - pattern: $DB.raw(`...${$X}...`, ...)
