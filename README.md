@@ -8,7 +8,9 @@
 
 **Offline security scanner for MCP servers and AI-agent tools.** It finds tool
 poisoning, hidden instructions, rug pulls, leaked secrets, risky launch commands,
-supply-chain gaps and vulnerable server code — and maps every finding to the
+supply-chain gaps, vulnerable server code and **poisoned agent instruction files**
+(`CLAUDE.md`, `AGENTS.md`, Cursor/Windsurf rules, Copilot instructions, skills, hooks) —
+and maps every finding to the
 **OWASP MCP Top 10** and the **OWASP Top 10 for Agentic Applications**.
 
 ```text
@@ -30,6 +32,7 @@ $ mcp-bastion --live
 | **Fully offline** | Tool descriptions never leave your machine — usable in air-gapped / regulated environments. Network lookups (OSV) are opt-in with `--online`. |
 | **Sees what the SDK hides** | The official SDK rejects tools with malformed schemas, so a malicious server can make itself invisible to SDK-based scanners. MCP Bastion falls back to a lenient JSON-RPC client and still reads every tool. |
 | **Config + tools + code** | Checks launch commands and secrets *before* anything runs, the live tool metadata, and the server's own source code. |
+| **Repo instructions** | Reads every file an agent takes orders from — `CLAUDE.md`, `AGENTS.md`, `.cursor/rules`, Copilot instructions, Claude skills, commands and hooks — and finds hidden text, exfiltration, safety bypasses and auto-run commands before you open the repo in an agent. |
 | **Best-of-breed engines** | Plugs in detect-secrets, Bandit, Semgrep (with bundled MCP rules), Gitleaks, OSV and the LLM Guard ML classifier when installed — one report, one rule catalogue. |
 | **CI-native** | SARIF for GitHub code scanning, Markdown job summary, policy file, exit codes, a ready-made GitHub Action. |
 | **Multilingual** | Injection and concealment patterns in English **and Vietnamese**. |
@@ -52,6 +55,8 @@ mcp-bastion --live                  # also start each server and analyse its too
 mcp-bastion --live --lock mcp.lock.json   # pin tool definitions; later runs flag rug pulls
 mcp-bastion --online                # check launched packages against OSV (CVEs + malicious packages)
 mcp-bastion path/to/mcp.json --source ./my-server -o report.html -o report.sarif
+mcp-bastion ./some-repo             # vet a repo before opening it in Claude Code / Cursor / Copilot
+mcp-bastion CLAUDE.md               # check one instruction file
 mcp-bastion inspect --server github # print full tool text, invisible characters made visible
 mcp-bastion discover                # which configs/servers would be scanned
 mcp-bastion engines                 # which third-party engines are installed
@@ -88,6 +93,28 @@ base64/hex payloads (decoded and re-analysed) · hidden parameters such as
 `sidenote` asking for conversation history · name collisions across servers ·
 code-execution and unannotated destructive tools · **toxic flows**: one agent that
 can read untrusted content, reach private data *and* send data out.
+
+**Agent instruction files** — a cloned repository can steer your coding agent. With no
+arguments MCP Bastion scans the current project and your user-level files; pass a folder to
+vet a repo, `--no-instructions` to skip this step.
+
+| Looked at | |
+|---|---|
+| Instructions | `CLAUDE.md` / `CLAUDE.local.md` / `AGENTS.md` / `GEMINI.md` (any depth), `.cursorrules`, `.cursor/rules/*.mdc`, `.windsurfrules`, `.windsurf/rules`, `.clinerules`, `.roo/rules`, `.continue/rules`, `.kiro/steering`, `.github/copilot-instructions.md`, `.github/instructions`, `.github/prompts`, `.junie/guidelines.md` |
+| Claude Code | `.claude/commands`, `.claude/agents`, `.claude/skills/*/SKILL.md` **and the skill's scripts** (also sent to Bandit/Semgrep/detect-secrets), `.claude/settings*.json` hooks, `apiKeyHelper`, permissions, `enableAllProjectMcpServers`, and the scripts hooks call |
+| Other agents | `.vscode/settings.json` auto-approve, `.vscode/tasks.json` tasks that run on folder open, `.codex/config.toml` approval / sandbox, `.gemini/settings.json` |
+
+Detected: invisible characters, Unicode-tag **ASCII smuggling** and **emoji
+(variation-selector) smuggling**, decoded and re-analysed · instructions hidden in HTML
+comments or `display:none` markup (invisible on GitHub, read by agents) · base64/hex payloads ·
+“ignore previous instructions” / fake `<system>` authority · telling the agent to hide
+actions from the user · exfiltration in prose or shell (`env | curl`, `curl -d @~/.aws/credentials`) ·
+download-and-execute, destructive and persistence commands · `--dangerously-skip-permissions`,
+“never ask for confirmation” · `@~/.ssh/id_rsa` imports · hooks and auto-run tasks.
+Sentences that *forbid* something (“never run `rm -rf /`”) are not reported, Markdown
+tables are not shell pipes, and well-known installers (`astral.sh`, `bun.sh`, rustup…) are
+allowed. Run against the agent files of openai/codex, microsoft/vscode, vercel/next.js,
+modelcontextprotocol/python-sdk, fastmcp and claude-code-action (66 files): no medium-or-higher finding.
 
 **Rug pulls** — `--lock FILE` stores a SHA-256 of every tool; changed, new and removed
 tools are reported until you re-pin with `--update-lock`.
@@ -129,7 +156,7 @@ steps:
   - uses: actions/checkout@v4
   - uses: lindseynguyen/mcp-bastion@v0.1.0
     with:
-      paths: ".mcp.json .vscode/mcp.json"
+      paths: "."                       # MCP configs + CLAUDE.md, AGENTS.md, rules, skills, hooks
       lock: mcp-bastion.lock.json      # commit it: tool changes then fail the PR
       fail-on: high
 ```
@@ -141,7 +168,8 @@ Findings appear in the Security tab and as a job summary.
 `mcp-bastion rules` prints the full catalogue. Families: **MB1xx** secrets,
 **MB2xx** supply chain, **MB3xx** execution & privilege, **MB4xx** transport, auth &
 shadow servers, **MB5xx** tool poisoning, **MB6xx** capabilities & toxic flows,
-**MB7xx** rug pulls, **MB8xx** server source code, **MB9xx** scanner status.
+**MB7xx** rug pulls, **MB8xx** server source code, **MB9xx** scanner status,
+**MB11xx** agent instruction files and agent settings.
 
 ## Tested against
 

@@ -52,6 +52,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="server source folder to scan with code engines (repeatable)")
     s.add_argument("--engines", default="all",
                    help="comma list of engines to use, 'all' (default) or 'none'")
+    s.add_argument("--no-instructions", action="store_true",
+                   help="skip agent instruction files (CLAUDE.md, AGENTS.md, rules, skills, agent settings)")
     s.add_argument("--policy", type=Path, help="policy file (YAML or JSON)")
     s.add_argument("--project", type=Path, help="project folder for project-level configs (default: cwd)")
     s.add_argument("-f", "--format", choices=FORMATS, default="console")
@@ -109,7 +111,8 @@ def cmd_scan(args) -> int:
                        online=args.online, timeout=args.timeout,
                        include_disabled=args.include_disabled, servers=args.server,
                        lockfile=args.lock, update_lock=args.update_lock, integrations=engines,
-                       source_dirs=args.source, policy=policy, tools_file=args.tools_file)
+                       source_dirs=args.source, policy=policy, tools_file=args.tools_file,
+                       instructions=not args.no_instructions)
     result = scan(opts)
 
     if args.format == "console":
@@ -124,8 +127,8 @@ def cmd_scan(args) -> int:
         out.write_text(report.WRITERS[fmt](result), encoding="utf-8")
         print(f"report written: {out}", file=sys.stderr)
 
-    if not result.servers and not result.tools:
-        print("mcp-bastion: no MCP servers found. Pass config paths or run `mcp-bastion discover`.",
+    if not result.servers and not result.tools and not result.instruction_files:
+        print("mcp-bastion: nothing to scan found. Pass config paths or run `mcp-bastion discover`.",
               file=sys.stderr)
     fail_on = args.fail_on or policy.fail_on
     worst = result.max_severity()
@@ -181,11 +184,20 @@ def cmd_discover(args) -> int:
     servers, files, errors = discovery.load_servers(args.paths or None, args.project)
     if not files:
         print("No MCP client configuration found.")
+    else:
+        print("MCP configurations:")
     for f in files:
         print(f"{f}")
         for s in (x for x in servers if x.config_path == f):
             state = " (disabled)" if s.disabled else ""
             print(f"  - {s.name} [{s.transport}]{state}: {scrub(s.command_line())}")
+    from . import instructions
+    roots = [p for p in args.paths if p.is_dir()] if args.paths else [args.project or Path.cwd()]
+    targets = instructions.discover(roots, include_user=not args.paths)
+    if targets:
+        print("\nAgent instruction files:")
+        for t in targets:
+            print(f"  - {t.display} [{t.kind}]")
     for e in errors:
         print(f"! {e}", file=sys.stderr)
     return EXIT_OK

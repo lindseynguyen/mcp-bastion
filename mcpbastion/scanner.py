@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import discovery, live, pinning
+from . import discovery, instructions, live, pinning
 from .integrations import Context, available_integrations, run_integrations
 from .launch import analyse
 from .models import ScanResult, ServerConfig, ToolInfo
@@ -29,11 +29,19 @@ class ScanOptions:
     source_dirs: list[Path] = field(default_factory=list)
     policy: Policy = field(default_factory=Policy)
     tools_file: Path | None = None       # offline: JSON dump of tools/list results
+    instructions: bool = True            # scan CLAUDE.md, AGENTS.md, rules, skills, agent settings
 
 
 def scan(opts: ScanOptions) -> ScanResult:
     result = ScanResult()
-    servers, files, errors = discovery.load_servers(opts.paths or None, opts.project_dir)
+    paths = [Path(p) for p in opts.paths]
+    instr_files = [p for p in paths if p.is_file() and (instructions.is_instruction_file(p)
+                                                        or p.suffix.lower() in (".md", ".mdc"))]
+    config_paths = [p for p in paths if p not in instr_files]
+    if paths and not config_paths:
+        servers, files, errors = [], [], []
+    else:
+        servers, files, errors = discovery.load_servers(config_paths or None, opts.project_dir)
     result.errors += errors
     if opts.servers:
         wanted = {s.lower() for s in opts.servers}
@@ -51,6 +59,16 @@ def scan(opts: ScanOptions) -> ScanResult:
     secret_files = {f.location for f in result.findings if f.rule_id in ("MB101", "MB102")}
     for path in sorted(set(files)):
         result.add(config_rules.check_file_permissions(path, path in secret_files))
+
+    # ---------------- agent instruction files, skills and agent settings
+    skill_dirs: list[Path] = []
+    if opts.instructions:
+        roots = [p for p in paths if p.is_dir()] if paths else [Path(opts.project_dir or Path.cwd())]
+        ins = instructions.scan(roots, include_user=not paths, extra_files=instr_files)
+        result.add(ins.findings)
+        result.errors += ins.errors
+        result.instruction_files = [t.display for t in ins.targets]
+        skill_dirs = ins.skill_dirs
 
     # ---------------- tools: live or from a saved dump
     tools: list[ToolInfo] = []
@@ -74,7 +92,7 @@ def scan(opts: ScanOptions) -> ScanResult:
 
     # ---------------- external security engines
     ctx = Context(servers=servers, launches=launches, tools=tools, online=opts.online,
-                  source_dirs=list(opts.source_dirs), timeout=max(opts.timeout, 60))
+                  source_dirs=list(opts.source_dirs) + skill_dirs, timeout=max(opts.timeout, 60))
     names = opts.integrations
     plugins = available_integrations(names)
     findings, status = run_integrations(plugins, ctx)

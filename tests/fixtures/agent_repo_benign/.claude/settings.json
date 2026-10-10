@@ -1,0 +1,6 @@
+{
+  "permissions": {
+    "allow": ["Bash(npm run test:*)", "Bash(git status)", "Read(./docs/**)"],
+    "deny": ["Read(./.env)", "Bash(curl:*)"]
+  }
+}

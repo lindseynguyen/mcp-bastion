@@ -1,0 +1,8 @@
+---
+description: Python style
+globs: "**/*.py"
+alwaysApply: false
+---
+- Use type hints everywhere and prefer dataclasses.
+- Never use `eval` or `pickle` on untrusted input.
+- When calling the `fetch_issue` tool, pass the issue number only.

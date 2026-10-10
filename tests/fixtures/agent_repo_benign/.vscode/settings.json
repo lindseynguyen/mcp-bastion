@@ -1,0 +1,5 @@
+{
+  // editor settings
+  "editor.formatOnSave": true,
+  "chat.tools.autoApprove": false,
+}

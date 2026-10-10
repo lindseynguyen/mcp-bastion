@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-bastion"
-version = "0.1.0"
+version = "0.2.0"
 description = "Offline security scanner for MCP servers and AI-agent tools: tool poisoning, rug pulls, secrets, supply chain and code flaws, mapped to OWASP MCP Top 10 and OWASP Agentic Top 10"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Nguyen Huu Thien Duc" }]
 requires-python = ">=3.10"
-keywords = ["mcp", "model-context-protocol", "ai-security", "llm-security", "agent-security",
+keywords = ["mcp", "model-context-protocol", "claude-md", "agents-md", "cursor-rules", "ai-security", "llm-security", "agent-security",
             "prompt-injection", "tool-poisoning", "owasp", "sarif"]
 classifiers = [
     "Programming Language :: Python :: 3",

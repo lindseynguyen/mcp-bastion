@@ -1,13 +1,13 @@
 name: "MCP Bastion"
-description: "Scan MCP server configs and tools for poisoning, secrets, supply-chain and code risks; upload SARIF to code scanning"
+description: "Scan MCP configs, MCP tools and agent instruction files (CLAUDE.md, AGENTS.md, rules, skills, hooks) for poisoning, secrets and supply-chain risks"
 branding:
   icon: shield
   color: blue
 
 inputs:
   paths:
-    description: "Space-separated MCP config files or folders to scan"
-    default: ".mcp.json .vscode/mcp.json .cursor/mcp.json"
+    description: "Space-separated folders or files to scan: MCP configs and agent instruction files (CLAUDE.md, AGENTS.md, rules, skills, hooks)"
+    default: "."
   live:
     description: "Start servers and analyse their tools (true/false)"
     default: "false"

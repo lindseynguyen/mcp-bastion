@@ -31,7 +31,7 @@ def console(result: ScanResult, stream=None, verbose: bool = False, min_sev: Sev
 
     w = stream.write
     w(f"mcp-bastion {__version__} - {len(result.servers)} server(s), {len(result.tools)} "
-      f"tool/prompt definition(s) inspected\n")
+      f"tool/prompt definition(s), {len(result.instruction_files)} agent instruction file(s) inspected\n")
     for e in result.errors:
         w(f"  ! {e}\n")
     findings = [f for f in result.sorted_findings() if f.severity >= min_sev]
@@ -73,6 +73,7 @@ def to_json(result: ScanResult) -> str:
                      "transport": s.transport, "command": scrub(s.command_line())} for s in result.servers],
         "tools": [{"server": t.server, "kind": t.kind, "name": t.name,
                    "sha256": t.fingerprint()} for t in result.tools],
+        "instruction_files": result.instruction_files,
         "findings": [f.to_dict() for f in result.sorted_findings()],
     }, indent=2, ensure_ascii=False)
 
@@ -139,7 +140,8 @@ def to_markdown(result: ScanResult) -> str:
     counts = result.counts()
     lines = ["## 🛡️ mcp-bastion report", "",
              " · ".join(f"**{k}** {v}" for k, v in counts.items()), "",
-             f"{len(result.servers)} servers · {len(result.tools)} tool definitions", ""]
+             f"{len(result.servers)} servers · {len(result.tools)} tool definitions · "
+             f"{len(result.instruction_files)} instruction files", ""]
     findings = result.sorted_findings()
     if not findings:
         lines.append("No findings. ✅")
@@ -218,7 +220,7 @@ td code{{word-break:break-all}}ul{{padding-left:18px;color:var(--mut)}}
 @media (max-width:600px){{.tiles{{grid-template-columns:repeat(3,1fr)}}td:nth-child(4){{display:none}}}}
 </style></head><body><main>
 <h1>MCP Bastion report</h1>
-<p class="sub">{len(result.servers)} servers · {len(result.tools)} tool definitions · {generated} · v{__version__}</p>
+<p class="sub">{len(result.servers)} servers · {len(result.tools)} tool definitions · {len(result.instruction_files)} instruction files · {generated} · v{__version__}</p>
 <div class="tiles">{tiles}</div>
 <h2>Findings</h2>
 {''.join(rows) or '<div class="empty">No findings ✅</div>'}

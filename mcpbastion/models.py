@@ -125,6 +125,7 @@ class ScanResult:
     findings: list[Finding] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     integrations: dict[str, str] = field(default_factory=dict)   # name -> status
+    instruction_files: list[str] = field(default_factory=list)
     suppressed: int = 0
 
     def add(self, findings: list[Finding] | Finding) -> None:
