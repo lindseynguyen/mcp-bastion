@@ -61,6 +61,7 @@ mcp-bastion inspect --server github # print full tool text, invisible characters
 mcp-bastion discover                # which configs/servers would be scanned
 mcp-bastion engines                 # which third-party engines are installed
 mcp-bastion rules                   # rule catalogue with OWASP mappings
+mcp-bastion gui                     # the same, in a browser window
 ```
 
 `--live` **runs the configured server commands** on your machine (that is how MCP
@@ -138,6 +139,23 @@ tools are reported until you re-pin with `--update-lock`.
 | [LLM Guard](https://github.com/protectai/llm-guard) | Local DeBERTa prompt-injection classifier for paraphrased attacks regexes miss | MB511 |
 
 An engine that is missing is skipped; one that crashes is reported and never stops the scan.
+
+## Graphical interface
+
+```bash
+mcp-bastion gui            # opens http://127.0.0.1:<port>/ in your browser
+```
+
+Every scan option from the command line is in the form (targets, live, online, engines, policy,
+baseline, pinning, sources, thresholds, LLM judge), and the page shows the **equivalent CLI
+command** as you type — the GUI and the CLI build the scan through the same code, so they always
+give the same result. Results show the pass/fail verdict, risk scores, findings with search and
+filters, the full tool text as the model sees it (invisible characters made visible), and let you
+export JSON / SARIF / HTML / Markdown, write a baseline or pin tool definitions.
+
+It listens on 127.0.0.1 only, every API call needs a per-session token, requests from other
+hosts or websites are refused, scanned text is always rendered as text, and live scans need an
+explicit confirmation. Nothing to install: it uses the Python standard library.
 
 ## Risk score
 

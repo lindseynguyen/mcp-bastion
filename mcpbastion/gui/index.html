@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="bastion-token" content="__BASTION_TOKEN__">
+<title>MCP Bastion</title>
+<style>
+:root{--bg:#f6f6f3;--panel:#fff;--sunk:#efefea;--fg:#1c1e22;--mut:#646a73;--line:#e1e1dc;--accent:#2457c5;
+--crit:#b3261e;--high:#c2410c;--med:#a16207;--low:#1d6fb8;--info:#7a8089;--ok:#1f7a3f;--on-accent:#fff;--r:8px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#111214;--panel:#191b1f;--sunk:#202328;
+--fg:#e7e7e4;--mut:#9aa0a8;--line:#2c3036;--accent:#7aa2ff;--crit:#ff6b6b;--high:#ff9f43;--med:#f5c542;
+--low:#5dade2;--info:#aab0b8;--ok:#4cc38a;--on-accent:#0b1020}}
+:root[data-theme=dark]{--bg:#111214;--panel:#191b1f;--sunk:#202328;--fg:#e7e7e4;--mut:#9aa0a8;--line:#2c3036;
+--accent:#7aa2ff;--crit:#ff6b6b;--high:#ff9f43;--med:#f5c542;--low:#5dade2;--info:#aab0b8;--ok:#4cc38a;--on-accent:#0b1020}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+a{color:var(--accent)}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--panel);
+position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0;letter-spacing:.01em}
+header .ver{color:var(--mut);font-size:12px}
+nav{display:flex;gap:2px;margin-left:16px;flex-wrap:wrap}
+nav button{background:none;border:0;color:var(--mut);font:inherit;padding:6px 10px;border-radius:6px;cursor:pointer}
+nav button[aria-selected=true]{background:var(--sunk);color:var(--fg);font-weight:600}
+nav .badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--crit);
+color:#fff;font-size:11px;text-align:center}
+.spacer{flex:1}
+main{max-width:1180px;margin:0 auto;padding:18px}
+section[hidden]{display:none}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.panel h2{font-size:14px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 18px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:4px}
+input[type=text],input[type=number],input[type=password],select,textarea{width:100%;background:var(--bg);color:var(--fg);
+border:1px solid var(--line);border-radius:6px;padding:7px 9px;font:inherit}
+textarea{min-height:64px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+.check{display:flex;align-items:flex-start;gap:8px;color:var(--fg);font-size:13.5px;margin:4px 0}
+.check input{margin-top:3px}
+.hint{color:var(--mut);font-size:12px;margin:3px 0 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--sunk);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 12px;font:inherit;cursor:pointer}
+.btn:hover{border-color:var(--mut)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.warn{border-left:3px solid var(--high);background:var(--sunk);padding:8px 10px;border-radius:6px;font-size:13px}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--sunk);border:1px solid var(--line);border-radius:6px;
+padding:8px 10px;margin:6px 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+.banner{display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:var(--r);border:1px solid var(--line);
+background:var(--panel);margin-bottom:14px}
+.banner .grade{font-size:30px;font-weight:700;width:52px;height:52px;border-radius:10px;display:grid;place-items:center;
+background:var(--sunk)}
+.banner.fail{border-left:5px solid var(--crit)} .banner.pass{border-left:5px solid var(--ok)}
+.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;cursor:pointer;
+text-align:left;font:inherit;color:var(--mut);text-transform:capitalize}
+.tile b{display:block;font-size:22px;color:var(--fg)}
+.tile[aria-pressed=true]{outline:2px solid var(--accent)}
+.sev-critical{color:var(--crit)}.sev-high{color:var(--high)}.sev-medium{color:var(--med)}.sev-low{color:var(--low)}
+.sev-info{color:var(--info)}
+.tile.sev b{color:inherit}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--mut);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.mono{overflow-wrap:anywhere}
+.bar{height:8px;background:var(--sunk);border-radius:4px;min-width:90px}
+.bar>i{display:block;height:8px;border-radius:4px}
+.finding{border:1px solid var(--line);border-left:4px solid var(--info);border-radius:var(--r);background:var(--panel);margin:6px 0}
+.finding.critical{border-left-color:var(--crit)}.finding.high{border-left-color:var(--high)}
+.finding.medium{border-left-color:var(--med)}.finding.low{border-left-color:var(--low)}
+.finding summary{list-style:none;cursor:pointer;padding:9px 12px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.finding summary::-webkit-details-marker{display:none}
+.finding .sevlabel{font-size:11px;font-weight:700;min-width:66px;letter-spacing:.03em}
+.finding .ttl{flex:1;min-width:220px}
+.finding .srv{color:var(--mut);font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.finding .body{padding:0 14px 12px}
+.tag{display:inline-block;border:1px solid var(--line);border-radius:4px;padding:0 5px;margin:0 4px 4px 0;font-size:11px;color:var(--mut)}
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.empty{color:var(--mut);text-align:center;padding:28px}
+.status{display:flex;gap:10px;align-items:center;color:var(--mut)}
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;
+animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{color:var(--crit);white-space:pre-wrap}
+dialog{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);color:var(--fg);width:min(640px,92vw);padding:0}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.dlg-h{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.dlg-b{max-height:55vh;overflow:auto;padding:6px 0}
+.dlg-b button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--fg);padding:5px 14px;font:inherit;cursor:pointer}
+.dlg-b button:hover{background:var(--sunk)}
+.dlg-f{padding:10px 14px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.toast{position:fixed;bottom:16px;right:16px;background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:6px;
+font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:70vw}
+.toast.on{opacity:1}
+@media (max-width:700px){.tiles{grid-template-columns:repeat(3,1fr)}.filters{grid-template-columns:1fr}
+nav{margin-left:0;order:3;width:100%}header{flex-wrap:wrap;position:static}main{padding:12px}
+#risk th:nth-child(3),#risk td:nth-child(3),#risk th:nth-child(5),#risk td:nth-child(5){display:none}
+.banner{flex-wrap:wrap}.banner>div:nth-child(2){flex:1 1 200px!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ MCP Bastion</h1><span class="ver" id="ver"></span>
+  <nav role="tablist" id="tabs">
+    <button role="tab" data-tab="scan" aria-selected="true">Scan</button>
+    <button role="tab" data-tab="results">Results <span class="badge" id="badge" hidden></span></button>
+    <button role="tab" data-tab="tools">Tools</button>
+    <button role="tab" data-tab="discover">Discover</button>
+    <button role="tab" data-tab="rules">Rules</button>
+    <button role="tab" data-tab="engines">Engines</button>
+  </nav>
+  <span class="spacer"></span>
+  <button class="btn" id="theme" title="Toggle light / dark">Theme</button>
+</header>
+<main>
+
+<!-- ============================== SCAN -->
+<section id="tab-scan">
+  <div class="panel">
+    <h2>What to scan</h2>
+    <div class="grid">
+      <div>
+        <label for="paths">Config files or folders (one per line)</label>
+        <textarea id="paths" placeholder="Empty = auto-discover every MCP client on this computer + the project folder"></textarea>
+        <div class="row" style="margin-top:6px"><button class="btn" data-browse="paths">Add…</button>
+          <span class="hint">A folder scans its MCP configs and agent instruction files.</span></div>
+      </div>
+      <div>
+        <label for="project">Project folder (used when the list is empty)</label>
+        <input type="text" id="project" placeholder="current folder">
+        <div class="row" style="margin-top:6px"><button class="btn" data-browse="project" data-single>Choose…</button></div>
+        <label for="servers" style="margin-top:10px">Only these servers (comma separated)</label>
+        <input type="text" id="servers" placeholder="all servers">
+      </div>
+      <div>
+        <label class="check"><input type="checkbox" id="instructions" checked> Agent instruction files
+          <span class="hint">CLAUDE.md, AGENTS.md, rules, skills, hooks</span></label>
+        <label class="check"><input type="checkbox" id="online"> Online lookups (OSV vulnerabilities and malicious packages)</label>
+        <label class="check"><input type="checkbox" id="include_disabled"> Include disabled servers</label>
+        <label class="check"><input type="checkbox" id="live"> Live: start servers and read their tools</label>
+        <div class="warn" id="livewarn" hidden>Live scanning <b>runs every configured server command</b> on this computer.
+          Only use it on configs you trust, or inside a VM / container.
+          <label class="check" style="margin-top:6px"><input type="checkbox" id="confirm_live"> I understand</label></div>
+        <label for="timeout" style="margin-top:6px">Per-server timeout (s)</label>
+        <input type="number" id="timeout" value="20" min="1" max="600">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Engines</h2>
+    <div class="row" id="enginechecks"></div>
+    <p class="hint">Missing engines are skipped. OSV also needs “Online lookups”.</p>
+  </div>
+
+  <details class="panel">
+    <summary style="cursor:pointer;font-weight:600">Advanced: policy, baseline, pinning, sources</summary>
+    <div class="grid" style="margin-top:12px">
+      <div><label for="policy">Policy file (YAML / JSON)</label><input type="text" id="policy">
+        <button class="btn" data-browse="policy" data-single data-file style="margin-top:6px">Choose…</button></div>
+      <div><label for="baseline">Baseline: only show new findings</label><input type="text" id="baseline">
+        <button class="btn" data-browse="baseline" data-single data-file style="margin-top:6px">Choose…</button></div>
+      <div><label for="lock">Tool pin file (rug-pull detection)</label><input type="text" id="lock" placeholder="e.g. mcp-bastion.lock.json">
+        <label class="check"><input type="checkbox" id="update_lock"> Accept current tools into the pin file</label></div>
+      <div><label for="tools_file">Saved tools/list JSON (offline)</label><input type="text" id="tools_file">
+        <button class="btn" data-browse="tools_file" data-single data-file style="margin-top:6px">Choose…</button></div>
+      <div><label for="sources">Server source folders for code engines (one per line)</label><textarea id="sources"></textarea>
+        <button class="btn" data-browse="sources" style="margin-top:6px">Add…</button></div>
+      <div><label for="fail_on">Fail when a finding reaches</label>
+        <select id="fail_on"><option value="">policy default (high)</option><option>critical</option><option>high</option>
+          <option>medium</option><option>low</option><option>info</option></select>
+        <label for="fail_score" style="margin-top:10px">…or a risk score reaches (0–100)</label>
+        <input type="number" id="fail_score" min="0" max="100" placeholder="policy default (off)"></div>
+    </div>
+  </details>
+
+  <details class="panel" id="llmpanel">
+    <summary style="cursor:pointer;font-weight:600">LLM judge (optional)</summary>
+    <p class="hint" style="margin-top:10px">Any OpenAI-compatible endpoint: LiteLLM, Ollama (<code>http://localhost:11434/v1</code>), vLLM, OpenAI.
+      Secrets are masked before sending; CRITICAL and hidden-text findings are never lowered.</p>
+    <div class="grid">
+      <div><label for="llm_url">Endpoint URL</label><input type="text" id="llm_url" placeholder="http://localhost:11434/v1"></div>
+      <div><label for="llm_model">Model</label><input type="text" id="llm_model" placeholder="qwen2.5:14b"></div>
+      <div><label for="llm_api_key">API key (kept in memory only)</label><input type="password" id="llm_api_key" autocomplete="off">
+        <p class="hint" id="keyhint"></p></div>
+      <div><label for="llm_mode">Mode</label><select id="llm_mode"><option value="review">review: flagged or risky items</option>
+        <option value="all">all: every tool and file</option></select>
+        <label class="check"><input type="checkbox" id="llm_no_downgrade"> Never lower rule findings</label></div>
+      <div><label for="llm_timeout">Timeout per call (s)</label><input type="number" id="llm_timeout" value="60" min="1" max="600"></div>
+    </div>
+  </details>
+
+  <div class="panel">
+    <div class="row">
+      <button class="btn primary" id="run">Run scan</button>
+      <div class="status" id="status"></div>
+    </div>
+    <p class="hint" style="margin-top:10px">Same scan from the command line:</p>
+    <pre id="cli"></pre>
+    <div class="err" id="scanerr"></div>
+  </div>
+</section>
+
+<!-- ============================== RESULTS -->
+<section id="tab-results" hidden>
+  <div id="noresults" class="panel empty">Run a scan to see results.</div>
+  <div id="results" hidden>
+    <div class="banner" id="banner"><div class="grade" id="grade"></div>
+      <div style="flex:1"><div id="verdict" style="font-weight:600"></div><div class="hint" id="summary"></div></div>
+      <div class="row">
+        <select id="exportfmt" aria-label="Export format"><option value="html">HTML</option><option value="json">JSON</option>
+          <option value="sarif">SARIF</option><option value="md">Markdown</option></select>
+        <button class="btn" id="export">Export</button>
+      </div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <div class="panel"><h2>Risk by server and file</h2><div id="risk"></div></div>
+    <div class="panel">
+      <h2>Findings</h2>
+      <div class="filters">
+        <input type="text" id="q" placeholder="Search message, evidence, rule…" aria-label="Search findings">
+        <select id="fserver" aria-label="Filter by server or file"></select>
+        <select id="frule" aria-label="Filter by rule"></select>
+      </div>
+      <div id="findings"></div>
+    </div>
+    <div class="panel">
+      <h2>Accept and continue</h2>
+      <div class="grid">
+        <div><label for="blpath">Write a baseline (accept current findings; CRITICAL never accepted)</label>
+          <div class="row"><input type="text" id="blpath" value=".mcp-bastion-baseline.json" style="flex:1">
+          <button class="btn" id="writebl">Write</button></div></div>
+        <div id="pinbox"><label for="pinpath">Pin current tool definitions (accept tool changes)</label>
+          <div class="row"><input type="text" id="pinpath" value="mcp-bastion.lock.json" style="flex:1">
+          <button class="btn" id="pin">Pin</button></div></div>
+      </div>
+    </div>
+    <div class="panel"><h2>Scan details</h2><div id="details"></div></div>
+  </div>
+</section>
+
+<!-- ============================== TOOLS -->
+<section id="tab-tools" hidden>
+  <div class="panel"><h2>Tool definitions as the model sees them</h2>
+    <p class="hint">Invisible characters are shown as &lt;U+XXXX&gt;. Requires a live scan or a saved tools file.</p>
+    <input type="text" id="tq" placeholder="Filter tools…" aria-label="Filter tools" style="margin:8px 0">
+    <div id="tools"></div></div>
+</section>
+
+<!-- ============================== DISCOVER -->
+<section id="tab-discover" hidden>
+  <div class="panel"><div class="row"><button class="btn primary" id="discoverbtn">Discover</button>
+    <span class="hint">Uses the targets from the Scan tab. Nothing is executed.</span></div>
+    <div id="discover" style="margin-top:12px"></div></div>
+</section>
+
+<!-- ============================== RULES -->
+<section id="tab-rules" hidden>
+  <div class="panel"><input type="text" id="rq" placeholder="Search rules…" aria-label="Search rules" style="margin-bottom:10px">
+    <div id="rules"></div></div>
+</section>
+
+<!-- ============================== ENGINES -->
+<section id="tab-engines" hidden>
+  <div class="panel"><div id="engines"></div></div>
+</section>
+</main>
+
+<dialog id="picker">
+  <div class="dlg-h"><button class="btn" id="up" title="Parent folder">↑</button><code id="cwdpath" style="flex:1;word-break:break-all"></code></div>
+  <div class="dlg-b" id="entries"></div>
+  <div class="dlg-f"><button class="btn" id="pickcancel">Cancel</button><button class="btn primary" id="pickhere">Use this folder</button></div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+"use strict";
+const TOKEN = document.querySelector('meta[name="bastion-token"]').content;
+const $ = (s) => document.querySelector(s);
+const SEV = ["critical", "high", "medium", "low", "info"];
+let META = null, JOB = null, RESULT = null, sevFilter = null;
+
+// Build DOM safely: every string becomes a text node, never HTML.
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "style") n.style.cssText = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false)
+    n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return n;
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 3200); }
+
+async function api(path, body) {
+  const opt = { headers: { "X-Bastion-Token": TOKEN } };
+  if (body !== undefined) { opt.method = "POST"; opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+  const r = await fetch(path, opt);
+  const data = r.headers.get("content-type")?.includes("json") ? await r.json() : await r.text();
+  if (!r.ok) throw new Error((data && data.error) || `HTTP ${r.status}`);
+  return data;
+}
+
+// ---------------------------------------------------------------- theme & tabs
+(function () {
+  let t = null; try { t = localStorage.getItem("bastion-theme"); } catch (e) {}
+  if (t) document.documentElement.dataset.theme = t;
+  $("#theme").onclick = () => {
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("bastion-theme", next); } catch (e) {}
+  };
+})();
+function showTab(name) {
+  document.querySelectorAll("[role=tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+  document.querySelectorAll("main>section").forEach(s => s.hidden = s.id !== "tab-" + name);
+}
+document.querySelectorAll("[role=tab]").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+// ---------------------------------------------------------------- form <-> request
+const TEXT = ["project", "servers", "policy", "baseline", "lock", "tools_file", "llm_url", "llm_model", "llm_mode",
+              "fail_on", "fail_score", "timeout", "llm_timeout"];
+const CHECK = ["instructions", "online", "include_disabled", "live", "update_lock", "llm_no_downgrade"];
+const LISTS = ["paths", "sources"];
+const lines = (s) => s.split("\n").map(x => x.trim()).filter(Boolean);
+
+function engineValue() {
+  const boxes = [...document.querySelectorAll("#enginechecks input")];
+  const on = boxes.filter(b => b.checked).map(b => b.value);
+  return on.length === boxes.length ? "all" : on.length === 0 ? "none" : on.join(",");
+}
+function request() {
+  const v = (id) => $("#" + id).value.trim();
+  const r = {
+    paths: lines($("#paths").value), sources: lines($("#sources").value),
+    project: v("project") || null, servers: v("servers") ? v("servers").split(",").map(s => s.trim()).filter(Boolean) : [],
+    policy: v("policy") || null, baseline: v("baseline") || null, lock: v("lock") || null, tools_file: v("tools_file") || null,
+    engines: engineValue(), timeout: Number(v("timeout") || 20),
+    llm_url: v("llm_url") || null, llm_model: v("llm_model") || null, llm_mode: v("llm_mode"),
+    llm_timeout: Number(v("llm_timeout") || 60), llm_api_key: v("llm_api_key") || null,
+    fail_on: v("fail_on") || null, fail_score: v("fail_score") === "" ? null : Number(v("fail_score")),
+  };
+  for (const c of CHECK) r[c] = $("#" + c).checked;
+  return r;
+}
+function cliCommand(r) {
+  const q = (s) => /^[\w@%+=:,./-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\\''") + "'";
+  const a = ["mcp-bastion", "scan", ...r.paths.map(q)];
+  if (r.project) a.push("--project", q(r.project));
+  for (const s of r.servers) a.push("--server", q(s));
+  if (r.live) a.push("--live");
+  if (r.online) a.push("--online");
+  if (r.include_disabled) a.push("--include-disabled");
+  if (!r.instructions) a.push("--no-instructions");
+  if (r.timeout !== 20) a.push("--timeout", r.timeout);
+  if (r.engines !== "all") a.push("--engines", q(r.engines));
+  if (r.policy) a.push("--policy", q(r.policy));
+  if (r.baseline) a.push("--baseline", q(r.baseline));
+  if (r.lock) a.push("--lock", q(r.lock));
+  if (r.update_lock) a.push("--update-lock");
+  if (r.tools_file) a.push("--tools-file", q(r.tools_file));
+  for (const s of r.sources) a.push("--source", q(s));
+  if (r.fail_on) a.push("--fail-on", r.fail_on);
+  if (r.fail_score !== null) a.push("--fail-score", r.fail_score);
+  if (r.llm_url) a.push("--llm-url", q(r.llm_url));
+  if (r.llm_model) a.push("--llm-model", q(r.llm_model));
+  if (r.llm_url && r.llm_mode !== "review") a.push("--llm-mode", r.llm_mode);
+  if (r.llm_url && r.llm_no_downgrade) a.push("--llm-no-downgrade");
+  if (r.llm_url && r.llm_timeout !== 60) a.push("--llm-timeout", r.llm_timeout);
+  return (r.llm_api_key ? "MCP_BASTION_LLM_API_KEY=… " : "") + a.join(" ");
+}
+function saveForm() {
+  const s = {};
+  for (const id of [...TEXT, ...LISTS]) s[id] = $("#" + id).value;
+  for (const id of CHECK) s[id] = $("#" + id).checked;
+  s.engines = engineValue();
+  try { localStorage.setItem("bastion-form", JSON.stringify(s)); } catch (e) {}
+}
+function loadForm() {
+  let s = null; try { s = JSON.parse(localStorage.getItem("bastion-form") || "null"); } catch (e) {}
+  if (!s) return;
+  for (const id of [...TEXT, ...LISTS]) if (typeof s[id] === "string") $("#" + id).value = s[id];
+  for (const id of CHECK) if (typeof s[id] === "boolean" && id !== "live") $("#" + id).checked = s[id];
+  if (s.engines && s.engines !== "all") {
+    const want = s.engines === "none" ? [] : s.engines.split(",");
+    document.querySelectorAll("#enginechecks input").forEach(b => b.checked = want.includes(b.value));
+  }
+}
+function refreshForm() {
+  $("#livewarn").hidden = !$("#live").checked;
+  $("#cli").textContent = cliCommand(request());
+  saveForm();
+}
+document.addEventListener("input", (e) => { if (e.target.closest("#tab-scan")) refreshForm(); });
+document.addEventListener("change", (e) => { if (e.target.closest("#tab-scan")) refreshForm(); });
+
+// ---------------------------------------------------------------- folder / file picker
+let pick = null;
+async function openPicker(target, single, wantFile) {
+  pick = { target, single, wantFile };
+  const start = (single ? $("#" + target).value.trim() : "") || META.cwd;
+  await browse(start);
+  $("#picker").showModal();
+}
+async function browse(path) {
+  let d;
+  try { d = await api("/api/ls", { path }); } catch (e) { toast(e.message); return; }
+  $("#cwdpath").textContent = d.path; pick.cwd = d.path; pick.parent = d.parent;
+  const box = $("#entries"); box.replaceChildren();
+  for (const e of d.entries) {
+    box.append(el("button", { onclick: () => e.dir ? browse(e.path) : choose(e.path) }, (e.dir ? "📁 " : "📄 ") + e.name));
+  }
+  if (!d.entries.length) box.append(el("div", { class: "empty" }, "Empty folder"));
+  $("#pickhere").hidden = !!pick.wantFile;
+}
+function choose(path) {
+  const t = $("#" + pick.target);
+  if (pick.single) t.value = path; else t.value = (t.value.trim() ? t.value.trim() + "\n" : "") + path;
+  $("#picker").close(); refreshForm();
+}
+$("#up").onclick = () => browse(pick.parent);
+$("#pickhere").onclick = () => choose(pick.cwd);
+$("#pickcancel").onclick = () => $("#picker").close();
+document.querySelectorAll("[data-browse]").forEach(b => b.onclick = () =>
+  openPicker(b.dataset.browse, b.hasAttribute("data-single"), b.hasAttribute("data-file")));
+
+// ---------------------------------------------------------------- run a scan
+$("#run").onclick = async () => {
+  const r = request();
+  $("#scanerr").textContent = "";
+  if (r.live && !$("#confirm_live").checked) { $("#scanerr").textContent = "Confirm the live-scan warning first."; return; }
+  $("#run").disabled = true;
+  try {
+    const { id } = await api("/api/scan", { ...r, confirm_live: r.live && $("#confirm_live").checked });
+    JOB = id; poll();
+  } catch (e) { $("#scanerr").textContent = e.message; $("#run").disabled = false; }
+};
+async function poll() {
+  let j;
+  try { j = await api("/api/jobs/" + JOB); } catch (e) { $("#scanerr").textContent = e.message; $("#run").disabled = false; return; }
+  const st = $("#status");
+  if (j.state === "running") {
+    st.replaceChildren(el("span", { class: "spin" }), `Scanning… ${j.elapsed}s`);
+    setTimeout(poll, 600); return;
+  }
+  $("#run").disabled = false;
+  if (j.state === "error") { st.replaceChildren(); $("#scanerr").textContent = j.error; return; }
+  st.replaceChildren(`Done in ${j.elapsed}s`);
+  RESULT = j.result; sevFilter = null; renderResults(); renderTools(); showTab("results");
+}
+
+// ---------------------------------------------------------------- results
+function sevClass(s) { return "sev-" + s; }
+function renderResults() {
+  const R = RESULT;
+  $("#noresults").hidden = true; $("#results").hidden = false;
+  const o = R.risk.overall || {}, v = R.verdict;
+  $("#banner").className = "banner " + (v.failed ? "fail" : "pass");
+  $("#grade").textContent = o.grade || "–";
+  $("#grade").className = "grade " + ({ A: "sev-info", B: "sev-low", C: "sev-medium", D: "sev-high", F: "sev-critical" }[o.grade] || "");
+  $("#verdict").textContent = (v.failed ? "FAIL — " : "PASS — ") + v.reason;
+  const hidden = [R.suppressed && `policy ${R.suppressed}`, R.inline_suppressed && `inline ${R.inline_suppressed}`,
+                  R.baselined && `baseline ${R.baselined}`].filter(Boolean);
+  $("#summary").textContent = `Overall ${o.score ?? 0}/100 · ${R.servers.length} servers · ${R.tools.length} tool definitions · `
+    + `${R.instruction_files.length} instruction files · ${o.at_risk ?? 0} at risk` + (hidden.length ? ` · not shown: ${hidden.join(", ")}` : "");
+  const total = R.findings.filter(f => f.severity === "critical" || f.severity === "high").length;
+  $("#badge").hidden = !total; $("#badge").textContent = total;
+
+  const tiles = $("#tiles"); tiles.replaceChildren();
+  for (const s of SEV) tiles.append(el("button", { class: "tile sev " + sevClass(s), "aria-pressed": String(sevFilter === s),
+    onclick: () => { sevFilter = sevFilter === s ? null : s; renderResults(); } }, el("b", {}, R.summary[s] || 0), s));
+
+  const risk = $("#risk"); risk.replaceChildren();
+  const subj = R.risk.subjects.filter(s => s.score > 0);
+  if (!subj.length) risk.append(el("div", { class: "empty" }, "No risk found ✓"));
+  else {
+    const color = { A: "var(--info)", B: "var(--low)", C: "var(--med)", D: "var(--high)", F: "var(--crit)" };
+    const t = el("table", {}, el("tr", {}, el("th", {}, "Grade"), el("th", {}, "Score"), el("th", {}, ""), el("th", {}, "Server / file"), el("th", {}, "Top issues")));
+    for (const s of subj) t.append(el("tr", {},
+      el("td", { style: `color:${color[s.grade]};font-weight:700` }, s.grade), el("td", {}, s.score),
+      el("td", {}, el("div", { class: "bar" }, el("i", { style: `width:${s.score}%;background:${color[s.grade]}` }))),
+      el("td", { class: "mono" }, el("a", { href: "#", onclick: (e) => { e.preventDefault(); $("#fserver").value = s.subject; renderFindings(); } }, s.subject)),
+      el("td", {}, s.top.join(", "))));
+    risk.append(t);
+  }
+
+  const servers = [...new Set(R.findings.map(f => f.server))].sort();
+  const rules = [...new Set(R.findings.map(f => f.rule_id))].sort();
+  const keepS = $("#fserver").value, keepR = $("#frule").value;
+  $("#fserver").replaceChildren(el("option", { value: "" }, "All servers and files"), ...servers.map(s => el("option", { value: s }, s)));
+  $("#frule").replaceChildren(el("option", { value: "" }, "All rules"), ...rules.map(r => el("option", { value: r }, r)));
+  if (servers.includes(keepS)) $("#fserver").value = keepS;
+  if (rules.includes(keepR)) $("#frule").value = keepR;
+  renderFindings();
+
+  $("#pinbox").hidden = !R.tools.length;
+  const d = $("#details"); d.replaceChildren();
+  const tbl = el("table");
+  for (const [k, val] of Object.entries(R.integrations)) tbl.append(el("tr", {}, el("td", {}, k), el("td", {}, val)));
+  if (R.llm_judge && Object.keys(R.llm_judge).length)
+    tbl.append(el("tr", {}, el("td", {}, "LLM judge"), el("td", {}, Object.entries(R.llm_judge).map(([k, x]) => `${k} ${x}`).join(" · "))));
+  d.append(el("h2", {}, "Engines"), tbl);
+  if (R.errors.length) d.append(el("h2", { style: "margin-top:12px" }, "Errors"), el("pre", {}, R.errors.join("\n")));
+  if (R.instruction_files.length) d.append(el("h2", { style: "margin-top:12px" }, "Instruction files scanned"),
+    el("pre", {}, R.instruction_files.join("\n")));
+}
+function renderFindings() {
+  const q = $("#q").value.trim().toLowerCase(), srv = $("#fserver").value, rule = $("#frule").value;
+  const box = $("#findings"); box.replaceChildren();
+  const rows = RESULT.findings.filter(f => (!sevFilter || f.severity === sevFilter) && (!srv || f.server === srv)
+    && (!rule || f.rule_id === rule) && (!q || [f.message, f.evidence, f.rule_id, f.title, f.location].join(" ").toLowerCase().includes(q)));
+  if (!rows.length) { box.append(el("div", { class: "empty" }, RESULT.findings.length ? "No findings match the filters." : "No findings ✓")); return; }
+  const rmap = Object.fromEntries(META.rules.map(r => [r.id, r]));
+  for (const f of rows.slice(0, 500)) {
+    const loc = f.location + (f.line ? ":" + f.line : "");
+    box.append(el("details", { class: "finding " + f.severity },
+      el("summary", {}, el("span", { class: "sevlabel " + sevClass(f.severity) }, f.severity.toUpperCase()),
+        el("code", {}, f.rule_id), el("span", { class: "ttl" }, f.title), el("span", { class: "srv" }, f.server)),
+      el("div", { class: "body" },
+        el("p", {}, f.message),
+        f.evidence ? el("pre", {}, f.evidence) : null,
+        el("p", {}, el("b", {}, "Fix: "), f.remediation),
+        el("div", {}, [...f.owasp_mcp, ...f.owasp_asi].map(t => el("span", { class: "tag", title: META.owasp[t] || "" }, t)),
+          el("span", { class: "tag" }, f.source), loc ? el("span", { class: "tag mono" }, loc) : null,
+          rmap[f.rule_id] ? el("span", { class: "tag" }, rmap[f.rule_id].category) : null))));
+  }
+  if (rows.length > 500) box.append(el("p", { class: "hint" }, `Showing 500 of ${rows.length}. Narrow the filters or export the report.`));
+}
+["#q", "#fserver", "#frule"].forEach(s => $(s).addEventListener("input", renderFindings));
+
+$("#export").onclick = async () => {
+  const fmt = $("#exportfmt").value;
+  try {
+    const r = await fetch(`/api/jobs/${JOB}/export?format=${fmt}`, { headers: { "X-Bastion-Token": TOKEN } });
+    if (!r.ok) throw new Error((await r.json()).error);
+    const blob = await r.blob();
+    const a = el("a", { href: URL.createObjectURL(blob), download: `mcp-bastion-report.${fmt}` });
+    document.body.append(a); a.click(); a.remove();
+  } catch (e) { toast("Export failed: " + e.message); }
+};
+$("#writebl").onclick = async () => {
+  try { const r = await api(`/api/jobs/${JOB}/baseline`, { path: $("#blpath").value.trim() });
+    toast(`Baseline written: ${r.path} (${r.accepted} findings)`); $("#baseline").value = r.path; refreshForm(); }
+  catch (e) { toast(e.message); }
+};
+$("#pin").onclick = async () => {
+  try { const r = await api(`/api/jobs/${JOB}/accept-tools`, { path: $("#pinpath").value.trim() });
+    toast(`Pinned ${r.pinned} definitions in ${r.path}`); $("#lock").value = r.path; refreshForm(); }
+  catch (e) { toast(e.message); }
+};
+
+// ---------------------------------------------------------------- tools
+function renderTools() {
+  const box = $("#tools"); box.replaceChildren();
+  const tools = (RESULT && RESULT.tool_details) || [];
+  const q = $("#tq").value.trim().toLowerCase();
+  const rows = tools.filter(t => !q || (t.server + " " + t.name + " " + t.description).toLowerCase().includes(q));
+  if (!rows.length) { box.append(el("div", { class: "empty" }, tools.length ? "No tools match." : "No tool definitions in this scan. Enable Live or load a tools file.")); return; }
+  const count = {};
+  for (const f of RESULT.findings) { const k = f.server + "|" + f.location; count[k] = (count[k] || 0) + 1; }
+  for (const t of rows) {
+    const n = count[t.server + "|" + t.kind + ":" + t.name] || 0;
+    const inv = Object.entries(t.invisible || {});
+    box.append(el("details", { class: "finding " + (t.hidden_text ? "critical" : n ? "high" : "info") },
+      el("summary", {}, el("span", { class: "sevlabel" }, t.kind.toUpperCase()), el("code", {}, t.name),
+        el("span", { class: "ttl" }, n ? `${n} finding${n > 1 ? "s" : ""}` : ""), el("span", { class: "srv" }, t.server)),
+      el("div", { class: "body" },
+        inv.length ? el("p", { class: "sev-critical" }, "Invisible characters: " + inv.map(([k, x]) => `${x}× ${k}`).join(", ")) : null,
+        t.hidden_text ? el("p", { class: "sev-critical" }, "Hidden text: ", el("code", {}, t.hidden_text)) : null,
+        el("pre", {}, t.description || "(no description)"),
+        t.params.length ? el("table", {}, ...t.params.map(p => el("tr", {}, el("td", { class: "mono" }, p.name), el("td", {}, p.description)))) : null,
+        el("p", { class: "hint mono" }, "sha256 " + t.sha256))));
+  }
+}
+$("#tq").addEventListener("input", renderTools);
+
+// ---------------------------------------------------------------- discover / rules / engines
+$("#discoverbtn").onclick = async () => {
+  const r = request(), box = $("#discover");
+  box.replaceChildren(el("div", { class: "status" }, el("span", { class: "spin" }), "Looking…"));
+  try {
+    const d = await api("/api/discover", { paths: r.paths, project: r.project });
+    box.replaceChildren();
+    box.append(el("h2", {}, `MCP configurations (${d.configs.length})`));
+    if (!d.configs.length) box.append(el("p", { class: "hint" }, "None found."));
+    for (const c of d.configs) {
+      const t = el("table", {}, el("tr", {}, el("th", {}, "Server"), el("th", {}, "Client"), el("th", {}, "Transport"), el("th", {}, "Command / URL")));
+      for (const s of c.servers) t.append(el("tr", {}, el("td", {}, s.name + (s.disabled ? " (disabled)" : "")), el("td", {}, s.client), el("td", {}, s.transport), el("td", { class: "mono" }, s.command)));
+      box.append(el("p", { class: "mono" }, c.path), t);
+    }
+    box.append(el("h2", { style: "margin-top:14px" }, `Agent instruction files (${d.instruction_files.length})`));
+    if (!d.instruction_files.length) box.append(el("p", { class: "hint" }, "None found."));
+    else box.append(el("table", {}, ...d.instruction_files.map(f => el("tr", {}, el("td", { class: "mono" }, f.path), el("td", {}, f.kind), el("td", {}, f.scope)))));
+    if (d.errors.length) box.append(el("pre", { class: "err" }, d.errors.join("\n")));
+  } catch (e) { box.replaceChildren(el("p", { class: "err" }, e.message)); }
+};
+function renderRules() {
+  const q = $("#rq").value.trim().toLowerCase();
+  const t = el("table", {}, el("tr", {}, el("th", {}, "Rule"), el("th", {}, "Severity"), el("th", {}, "Title"), el("th", {}, "OWASP")));
+  for (const r of META.rules.filter(r => !q || (r.id + r.title + r.category + r.remediation).toLowerCase().includes(q)))
+    t.append(el("tr", { title: r.remediation }, el("td", { class: "mono" }, r.id), el("td", { class: sevClass(r.severity) }, r.severity),
+      el("td", {}, r.title), el("td", {}, r.owasp.map(o => el("span", { class: "tag", title: META.owasp[o] || "" }, o)))));
+  $("#rules").replaceChildren(t);
+}
+$("#rq").addEventListener("input", renderRules);
+function renderEngines() {
+  const t = el("table", {}, el("tr", {}, el("th", {}, ""), el("th", {}, "Engine"), el("th", {}, "What it adds"), el("th", {}, "Install")));
+  for (const e of META.engines) t.append(el("tr", {}, el("td", { class: e.available ? "sev-info" : "sev-high" }, e.available ? "✓" : "✗"),
+    el("td", {}, e.name), el("td", {}, e.description + (e.needs_network ? " (needs online)" : "")), el("td", { class: "mono" }, e.hint)));
+  $("#engines").replaceChildren(t);
+  const box = $("#enginechecks"); box.replaceChildren();
+  for (const e of META.engines) box.append(el("label", { class: "check", style: "margin-right:14px" },
+    el("input", { type: "checkbox", value: e.name, checked: true }), e.name + (e.available ? "" : " (not installed)")));
+}
+
+// ---------------------------------------------------------------- boot
+(async function boot() {
+  try { META = await api("/api/meta"); } catch (e) { document.body.replaceChildren(el("p", { class: "err", style: "padding:20px" }, "Cannot reach the scanner: " + e.message)); return; }
+  $("#ver").textContent = "v" + META.version;
+  $("#project").placeholder = META.cwd;
+  if (META.llm_env.url && !$("#llm_url").value) $("#llm_url").value = META.llm_env.url;
+  if (META.llm_env.model && !$("#llm_model").value) $("#llm_model").value = META.llm_env.model;
+  $("#keyhint").textContent = META.llm_env.key_set ? "MCP_BASTION_LLM_API_KEY is set; leave empty to use it." : "";
+  renderRules(); renderEngines(); loadForm(); refreshForm();
+})();
+</script>
+</body>
+</html>

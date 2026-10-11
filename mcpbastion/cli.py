@@ -8,10 +8,11 @@ from pathlib import Path
 from . import __version__, discovery, live, report
 from .integrations import registry
 from .models import Severity
-from .policy import Policy
 from .rules.catalog import OWASP_ASI, OWASP_MCP, RULES
 from .rules.tool_rules import decode_tag_chars, invisible_chars
-from .scanner import ScanOptions, scan
+from .options import ScanRequest, verdict
+from .options import build as build_request
+from .scanner import scan
 from .secrets import scrub
 
 EXIT_OK, EXIT_FINDINGS, EXIT_ERROR = 0, 1, 2
@@ -89,6 +90,10 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("paths", nargs="*", type=Path)
     d.add_argument("--project", type=Path)
 
+    gu = sub.add_parser("gui", help="open the graphical interface in your browser (local only)")
+    gu.add_argument("--port", type=int, default=0, help="port on 127.0.0.1 (default: a free one)")
+    gu.add_argument("--no-browser", action="store_true", help="print the address instead of opening a browser")
+
     sub.add_parser("rules", help="list detection rules and OWASP mappings")
     sub.add_parser("engines", help="show which third-party engines are installed")
     return p
@@ -101,12 +106,12 @@ def main(argv: list[str] | None = None) -> int:
         except (AttributeError, ValueError):
             pass
     argv = list(sys.argv[1:] if argv is None else argv)
-    known = {"scan", "inspect", "discover", "rules", "engines", "-h", "--help", "--version"}
+    known = {"scan", "inspect", "discover", "rules", "engines", "gui", "-h", "--help", "--version"}
     if not argv or argv[0] not in known:
         argv = ["scan", *argv]
     args = build_parser().parse_args(argv)
     try:
-        return {"scan": cmd_scan, "inspect": cmd_inspect, "discover": cmd_discover,
+        return {"scan": cmd_scan, "inspect": cmd_inspect, "discover": cmd_discover, "gui": cmd_gui,
                 "rules": cmd_rules, "engines": cmd_engines}[args.cmd](args)
     except KeyboardInterrupt:
         return EXIT_ERROR
@@ -115,21 +120,29 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
 
 
+def request_from_args(args) -> ScanRequest:
+    s = lambda v: str(v) if v is not None else None  # noqa: E731
+    return ScanRequest(
+        paths=[str(p) for p in args.paths], project=s(args.project), live=args.live, online=args.online,
+        timeout=args.timeout, include_disabled=args.include_disabled, servers=list(args.server),
+        lock=s(args.lock), update_lock=args.update_lock, tools_file=s(args.tools_file),
+        sources=[str(p) for p in args.source], engines=args.engines, policy=s(args.policy),
+        instructions=not args.no_instructions, baseline=s(args.baseline), llm_url=args.llm_url,
+        llm_model=args.llm_model, llm_mode=args.llm_mode, llm_no_downgrade=args.llm_no_downgrade,
+        llm_timeout=args.llm_timeout, fail_on=args.fail_on.name if args.fail_on else None,
+        fail_score=args.fail_score)
+
+
 def cmd_scan(args) -> int:
-    policy = Policy.load(args.policy)
     if args.live:
         print("mcp-bastion: --live starts every configured stdio server on this machine.",
               file=sys.stderr)
-    engines = None if args.engines.strip().lower() == "all" else (
-        [] if args.engines.strip().lower() == "none" else args.engines.split(","))
-    opts = ScanOptions(paths=args.paths, project_dir=args.project, live=args.live,
-                       online=args.online, timeout=args.timeout,
-                       include_disabled=args.include_disabled, servers=args.server,
-                       lockfile=args.lock, update_lock=args.update_lock, integrations=engines,
-                       source_dirs=args.source, policy=policy, tools_file=args.tools_file,
-                       instructions=not args.no_instructions, baseline=args.baseline,
-                       judge=_judge_config(args))
-    result = scan(opts)
+    built = build_request(request_from_args(args))
+    if built.options.judge:
+        j = built.options.judge
+        print(f"mcp-bastion: LLM judge {j.model} at {j.url} ({j.mode} mode; secrets are masked "
+              "before sending)", file=sys.stderr)
+    result = scan(built.options)
     if args.write_baseline:
         from . import baseline
         n = baseline.write(args.write_baseline, result.findings)
@@ -150,26 +163,7 @@ def cmd_scan(args) -> int:
     if not result.servers and not result.tools and not result.instruction_files:
         print("mcp-bastion: nothing to scan found. Pass config paths or run `mcp-bastion discover`.",
               file=sys.stderr)
-    fail_on = args.fail_on or policy.fail_on
-    worst = result.max_severity()
-    if worst is not None and worst >= fail_on:
-        return EXIT_FINDINGS
-    fail_score = args.fail_score if args.fail_score is not None else policy.max_risk_score
-    if fail_score is not None and any(s.score >= fail_score for s in result.scores):
-        return EXIT_FINDINGS
-    return EXIT_OK
-
-
-def _judge_config(args):
-    from .judge import JudgeConfig
-    cfg = JudgeConfig.from_env(args.llm_url, args.llm_model, mode=args.llm_mode,
-                               timeout=args.llm_timeout, allow_downgrade=not args.llm_no_downgrade)
-    if (args.llm_url or args.llm_model) and cfg is None:
-        raise ValueError("--llm-url and --llm-model are both needed for the LLM judge")
-    if cfg:
-        print(f"mcp-bastion: LLM judge {cfg.model} at {cfg.url} ({cfg.mode} mode; secrets are masked "
-              "before sending)", file=sys.stderr)
-    return cfg
+    return EXIT_FINDINGS if verdict(result, built.fail_on, built.fail_score)["failed"] else EXIT_OK
 
 
 def cmd_inspect(args) -> int:
@@ -238,6 +232,11 @@ def cmd_discover(args) -> int:
     for e in errors:
         print(f"! {e}", file=sys.stderr)
     return EXIT_OK
+
+
+def cmd_gui(args) -> int:
+    from .gui.server import run
+    return run(port=args.port, open_browser=not args.no_browser)
 
 
 def cmd_rules(_args) -> int:

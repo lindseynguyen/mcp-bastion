@@ -37,10 +37,11 @@ Homepage = "https://github.com/lindseynguyen/mcp-bastion"
 Issues = "https://github.com/lindseynguyen/mcp-bastion/issues"
 
 [tool.setuptools]
-packages = ["mcpbastion", "mcpbastion.rules", "mcpbastion.integrations"]
+packages = ["mcpbastion", "mcpbastion.rules", "mcpbastion.integrations", "mcpbastion.gui"]
 
 [tool.setuptools.package-data]
 "mcpbastion.integrations" = ["semgrep_rules.yml"]
+"mcpbastion.gui" = ["index.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -56,4 +57,4 @@ select = ["E9", "F", "B", "S"]
 ignore = ["S603", "S607", "S404", "B008", "S110", "S112"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "S105", "S106", "S108"]
+"tests/*" = ["S101", "S105", "S106", "S108", "S310"]

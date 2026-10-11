@@ -74,7 +74,8 @@ class JudgeConfig:
         model = model or os.environ.get("MCP_BASTION_LLM_MODEL")
         if not url or not model:
             return None
-        key = os.environ.get("MCP_BASTION_LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        key = kw.pop("api_key", None) or os.environ.get("MCP_BASTION_LLM_API_KEY") \
+            or os.environ.get("OPENAI_API_KEY")
         cache = kw.pop("cache_path", None) or Path(
             os.environ.get("MCP_BASTION_CACHE", Path.home() / ".cache" / "mcp-bastion")) / "judge.json"
         return cls(url=url.rstrip("/"), model=model, api_key=key, cache_path=cache, **kw)

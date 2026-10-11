@@ -3,6 +3,10 @@
 ## [0.4.0] - 2026-10-11
 
 ### Added
+- **Graphical interface** (`mcp-bastion gui`): local web UI covering every scan option, results with
+  verdict, risk scores, filterable findings, tool inspector, discover, rules and engines; exports,
+  baselines and tool pinning. Same scan code as the CLI (shared `ScanRequest`), loopback only,
+  per-session token, Host/Origin checks, text-only rendering of scanned content, CSP.
 - **LLM judge** (`--llm-url`, `--llm-model`, `--llm-mode review|all`): any OpenAI-compatible endpoint
   (LiteLLM, Ollama, vLLM, OpenAI) classifies the intent of tool metadata and instruction files.
   New findings as MB513 with English and Vietnamese reasons; confirms rule findings; can lower a
