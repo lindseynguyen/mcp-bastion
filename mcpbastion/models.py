@@ -129,6 +129,9 @@ class ScanResult:
     suppressed: int = 0
     inline_suppressed: int = 0
     baselined: int = 0
+    scores: list = field(default_factory=list)          # scoring.Score
+    overall: dict = field(default_factory=dict)
+    judge_stats: dict = field(default_factory=dict)
 
     def add(self, findings: list[Finding] | Finding) -> None:
         items = [findings] if isinstance(findings, Finding) else findings

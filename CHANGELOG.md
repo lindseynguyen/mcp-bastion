@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0] - 2026-10-11
+
+### Added
+- **LLM judge** (`--llm-url`, `--llm-model`, `--llm-mode review|all`): any OpenAI-compatible endpoint
+  (LiteLLM, Ollama, vLLM, OpenAI) classifies the intent of tool metadata and instruction files.
+  New findings as MB513 with English and Vietnamese reasons; confirms rule findings; can lower a
+  HIGH/MEDIUM finding one level when confident it is benign (`--llm-no-downgrade`). Untrusted text
+  is delimited with a random nonce, secrets are masked before sending, CRITICAL / hidden-text /
+  typosquat / rug-pull findings are never lowered, verdicts are cached, failures never stop a scan.
+- **Risk score** 0-100 and grade A-F per server, file and agent, plus a weakest-link overall score,
+  in console, JSON, HTML and Markdown. `--fail-score N` and policy `max_risk_score`.
+- GitHub Action input `fail-score`.
+
 ## [0.3.0] - 2026-10-11
 
 ### Added

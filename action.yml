@@ -26,6 +26,9 @@ inputs:
   fail-on:
     description: "Fail the job at this severity (critical, high, medium, low, info)"
     default: "high"
+  fail-score:
+    description: "Also fail when any server or file reaches this risk score (0-100), e.g. 50"
+    default: ""
   sarif:
     description: "Path of the SARIF report"
     default: "mcp-bastion.sarif"
@@ -61,6 +64,7 @@ runs:
         [ -n "${{ inputs.lock }}" ] && args+=(--lock "${{ inputs.lock }}")
         [ -n "${{ inputs.policy }}" ] && args+=(--policy "${{ inputs.policy }}")
         for s in ${{ inputs.source }}; do args+=(--source "$s"); done
+        [ -n "${{ inputs.fail-score }}" ] && args+=(--fail-score "${{ inputs.fail-score }}")
         set +e
         mcp-bastion scan "${args[@]}" --fail-on "${{ inputs.fail-on }}" \
           -o "${{ inputs.sarif }}" -o mcp-bastion.md

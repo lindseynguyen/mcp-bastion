@@ -56,6 +56,17 @@ def build_parser() -> argparse.ArgumentParser:
                    help="only report findings that are not in this baseline file")
     s.add_argument("--write-baseline", type=Path, metavar="FILE",
                    help="accept the current findings: write them to a baseline file (CRITICAL is never baselined)")
+    g = s.add_argument_group("LLM judge (any OpenAI-compatible endpoint; API key from MCP_BASTION_LLM_API_KEY)")
+    g.add_argument("--llm-url", metavar="URL", help="e.g. http://localhost:11434/v1 or your LiteLLM gateway "
+                   "(or MCP_BASTION_LLM_URL)")
+    g.add_argument("--llm-model", metavar="NAME", help="model name (or MCP_BASTION_LLM_MODEL)")
+    g.add_argument("--llm-mode", choices=("review", "all"), default="review",
+                   help="review: only flagged or risky-looking items (default); all: every tool and file")
+    g.add_argument("--llm-no-downgrade", action="store_true",
+                   help="never lower a rule finding, even when the judge says benign")
+    g.add_argument("--llm-timeout", type=float, default=60.0)
+    s.add_argument("--fail-score", type=int, metavar="N",
+                   help="exit 1 if any server/file risk score reaches N (0-100)")
     s.add_argument("--no-instructions", action="store_true",
                    help="skip agent instruction files (CLAUDE.md, AGENTS.md, rules, skills, agent settings)")
     s.add_argument("--policy", type=Path, help="policy file (YAML or JSON)")
@@ -116,7 +127,8 @@ def cmd_scan(args) -> int:
                        include_disabled=args.include_disabled, servers=args.server,
                        lockfile=args.lock, update_lock=args.update_lock, integrations=engines,
                        source_dirs=args.source, policy=policy, tools_file=args.tools_file,
-                       instructions=not args.no_instructions, baseline=args.baseline)
+                       instructions=not args.no_instructions, baseline=args.baseline,
+                       judge=_judge_config(args))
     result = scan(opts)
     if args.write_baseline:
         from . import baseline
@@ -140,7 +152,24 @@ def cmd_scan(args) -> int:
               file=sys.stderr)
     fail_on = args.fail_on or policy.fail_on
     worst = result.max_severity()
-    return EXIT_FINDINGS if worst is not None and worst >= fail_on else EXIT_OK
+    if worst is not None and worst >= fail_on:
+        return EXIT_FINDINGS
+    fail_score = args.fail_score if args.fail_score is not None else policy.max_risk_score
+    if fail_score is not None and any(s.score >= fail_score for s in result.scores):
+        return EXIT_FINDINGS
+    return EXIT_OK
+
+
+def _judge_config(args):
+    from .judge import JudgeConfig
+    cfg = JudgeConfig.from_env(args.llm_url, args.llm_model, mode=args.llm_mode,
+                               timeout=args.llm_timeout, allow_downgrade=not args.llm_no_downgrade)
+    if (args.llm_url or args.llm_model) and cfg is None:
+        raise ValueError("--llm-url and --llm-model are both needed for the LLM judge")
+    if cfg:
+        print(f"mcp-bastion: LLM judge {cfg.model} at {cfg.url} ({cfg.mode} mode; secrets are masked "
+              "before sending)", file=sys.stderr)
+    return cfg
 
 
 def cmd_inspect(args) -> int:

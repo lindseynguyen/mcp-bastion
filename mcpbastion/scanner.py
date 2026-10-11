@@ -30,6 +30,7 @@ class ScanOptions:
     policy: Policy = field(default_factory=Policy)
     tools_file: Path | None = None       # offline: JSON dump of tools/list results
     baseline: Path | None = None         # only report findings not in this baseline
+    judge: object | None = None          # judge.JudgeConfig: LLM second opinion
     instructions: bool = True            # scan CLAUDE.md, AGENTS.md, rules, skills, agent settings
 
 
@@ -63,6 +64,7 @@ def scan(opts: ScanOptions) -> ScanResult:
 
     # ---------------- agent instruction files, skills and agent settings
     skill_dirs: list[Path] = []
+    instruction_texts: dict[str, str] = {}
     if opts.instructions:
         roots = [p for p in paths if p.is_dir()] if paths else [Path(opts.project_dir or Path.cwd())]
         ins = instructions.scan(roots, include_user=not paths, extra_files=instr_files,
@@ -72,6 +74,13 @@ def scan(opts: ScanOptions) -> ScanResult:
         result.errors += ins.errors
         result.instruction_files = [t.display for t in ins.targets]
         skill_dirs = ins.skill_dirs
+        if opts.judge:
+            for t in ins.targets:
+                if t.kind != "settings":
+                    try:
+                        instruction_texts[t.display] = t.path.read_text(encoding="utf-8", errors="replace")
+                    except OSError:
+                        pass
 
     # ---------------- tools: live or from a saved dump
     tools: list[ToolInfo] = []
@@ -102,11 +111,28 @@ def scan(opts: ScanOptions) -> ScanResult:
     result.add(findings)
     result.integrations = status
 
+    # ---------------- LLM judge (optional second opinion)
+    if opts.judge:
+        from . import judge as jd
+        j = jd.Judge(opts.judge)
+        items = jd.collect_items(result, instruction_texts, opts.judge.mode)
+        judged = j.run(items)
+        result.judge_stats = jd.apply(result, judged, opts.judge.allow_downgrade)
+        result.judge_stats.update(calls=j.calls, cached=sum(v.cached for _, v in judged),
+                                  errors=len(j.errors))
+        status = f"ok ({result.judge_stats['judged']} judged, {j.calls} calls"
+        status += f", {len(j.errors)} errors: {j.errors[0]})" if j.errors else ")"
+        result.integrations["llm-judge"] = status
+
     # ---------------- policy
     result.findings, result.suppressed = opts.policy.apply(result.findings)
     if opts.baseline:
         from . import baseline
         result.findings, result.baselined = baseline.apply(result.findings, baseline.load(opts.baseline))
+
+    # ---------------- risk scores
+    from . import scoring
+    result.scores, result.overall = scoring.score(result)
     return result
 
 

@@ -45,7 +45,7 @@ pipx install semgrep                   # optional: code rules (keep it in its ow
 pip install "mcp-bastion[ml]"          # optional: LLM Guard classifier (~2 GB)
 ```
 
-Until the first PyPI release: `pip install "mcp-bastion[engines] @ git+https://github.com/lindseynguyen/mcp-bastion@v0.3.0"`.
+Until the first PyPI release: `pip install "mcp-bastion[engines] @ git+https://github.com/lindseynguyen/mcp-bastion@v0.4.0"`.
 
 ## Use
 
@@ -139,6 +139,47 @@ tools are reported until you re-pin with `--update-lock`.
 
 An engine that is missing is skipped; one that crashes is reported and never stops the scan.
 
+## Risk score
+
+Every server, instruction file and agent gets a score from 0 to 100 and a grade, so you
+know where to start:
+
+```text
+risk score:
+  D  58 ██████····  db  (MB101 high, MB305 high)
+  C  48 █████·····  github  (MB101 high, MB201 medium)
+  C  45 ████······  docker-tool  (MB302 high, MB203 medium)
+overall: D (58/100), 1 of 10 at risk (score ≥ 50)
+```
+
+Each distinct rule counts once at its worst severity and they combine like independent risks
+(one CRITICAL = 60, two HIGH ≈ 58, five LOW < 25). Grades: A < 10 · B < 30 · C < 50 · D < 70 · F.
+The overall score is the weakest link: the riskiest subject, +5 for every other one at D or F.
+`--fail-score 50` (or `max_risk_score: 50` in the policy) fails CI on any subject at D or worse.
+Scores are in the JSON (`risk`), HTML and Markdown reports.
+
+## LLM judge (optional)
+
+Rules find markers; a model can judge *intent*. Point MCP Bastion at any OpenAI-compatible
+endpoint — a LiteLLM gateway, Ollama, vLLM, OpenAI:
+
+```bash
+export MCP_BASTION_LLM_API_KEY=...            # never on the command line
+mcp-bastion --live --llm-url http://localhost:11434/v1 --llm-model qwen2.5:14b
+mcp-bastion ./repo --llm-url https://llm-gateway.internal/v1 --llm-model gpt-4o-mini --llm-mode all
+```
+
+- **Finds what rules miss** — paraphrased exfiltration or manipulation is reported as MB513 with
+  the quote and a one-line reason in English and Vietnamese.
+- **Confirms** rule findings (the reason is appended) and, when confident the text is benign,
+  **lowers** a HIGH/MEDIUM finding by one level (`--llm-no-downgrade` to disable).
+- **Hard to fool**: the judged text is wrapped in a random delimiter and treated as untrusted;
+  secrets are masked before sending; CRITICAL and hidden-text / typosquat / rug-pull findings
+  are never lowered; nothing is ever removed.
+- **Cheap**: `review` mode (default) only sends items the rules flagged or that look risky;
+  verdicts are cached by model + text hash (`~/.cache/mcp-bastion`). The scan never needs the
+  model — if it is down, findings stay as they are and the engine status says why.
+
 ## Adopting it on an existing project
 
 ```bash
@@ -164,7 +205,7 @@ a poisoned `CLAUDE.md` can add markers too. Suppressed counts are always printed
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/lindseynguyen/mcp-bastion
-    rev: v0.3.0
+    rev: v0.4.0
     hooks:
       - id: mcp-bastion
 ```
@@ -205,7 +246,7 @@ Findings appear in the Security tab and as a job summary.
 ## Rules
 
 `mcp-bastion rules` prints the full catalogue. Families: **MB1xx** secrets,
-**MB2xx** supply chain and typosquats, **MB3xx** execution & privilege, **MB4xx** transport, auth &
+**MB2xx** supply chain and typosquats, **MB513** LLM judge, **MB3xx** execution & privilege, **MB4xx** transport, auth &
 shadow servers, **MB5xx** tool poisoning, **MB6xx** capabilities & toxic flows,
 **MB7xx** rug pulls, **MB8xx** server source code, **MB9xx** scanner status,
 **MB11xx** agent instruction files and agent settings.

@@ -154,6 +154,10 @@ _RULES = [
          "Tool names should be plain ASCII. A name that looks like another server's tool lets "
          "a malicious server intercept calls meant for the trusted one.",
          ("MCP03", "MCP09"), ("ASI02", "ASI04"), "tool"),
+    Rule("MB513", "LLM judge found malicious intent", Severity.HIGH,
+         "Read the quoted text and the judge's reason; the rules did not flag it, so review it by hand "
+         "before trusting the server or file.",
+         ("MCP03", "MCP06"), ("ASI01", "ASI02", "ASI06"), "llm"),
     Rule("MB511", "ML prompt-injection classifier flagged tool metadata", Severity.HIGH,
          "Review the flagged text; the classifier score is attached as evidence.",
          ("MCP03", "MCP06"), ("ASI01",), "tool"),

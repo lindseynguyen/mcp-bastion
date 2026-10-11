@@ -32,6 +32,9 @@ ignore:
     server: "internal-*"
     reason: "Auth enforced by the LiteLLM gateway in front of these servers"
 
+# Fail when any server / file reaches this risk score (0-100; 50 = grade D)
+max_risk_score: 70
+
 # Honour `mcp-bastion-ignore[...]` markers in instruction files (never for CRITICAL).
 # Set to false when vetting repositories you do not control.
 inline_ignores: true

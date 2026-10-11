@@ -61,6 +61,19 @@ def console(result: ScanResult, stream=None, verbose: bool = False, min_sev: Sev
     if any(hidden):
         w("  (not shown: " + ", ".join(h for h in hidden if h) + ")")
     w("\n")
+    risky = [s for s in result.scores if s.score > 0]
+    if risky:
+        w("\nrisk score:\n")
+        for s in risky[:12]:
+            sev = (Severity.CRITICAL if s.score >= 70 else Severity.HIGH if s.score >= 50 else
+                   Severity.MEDIUM if s.score >= 30 else Severity.LOW)
+            bar = "█" * round(s.score / 10) + "·" * (10 - round(s.score / 10))
+            w(f"  {c(sev, s.grade)} {s.score:>3} {bar}  {s.subject}  ({', '.join(s.top[:2])})\n")
+        if len(risky) > 12:
+            w(f"  … {len(risky) - 12} more\n")
+    if result.overall:
+        o = result.overall
+        w(f"overall: {o['grade']} ({o['score']}/100), {o['at_risk']} of {o['subjects']} at risk (score ≥ 50)\n")
     if result.integrations:
         w("engines: " + "; ".join(f"{k} {v}" for k, v in result.integrations.items()) + "\n")
 
@@ -78,6 +91,8 @@ def to_json(result: ScanResult) -> str:
         "tools": [{"server": t.server, "kind": t.kind, "name": t.name,
                    "sha256": t.fingerprint()} for t in result.tools],
         "instruction_files": result.instruction_files,
+        "risk": {"overall": result.overall, "subjects": [s.to_dict() for s in result.scores]},
+        "llm_judge": result.judge_stats,
         "findings": [f.to_dict() for f in result.sorted_findings()],
     }, indent=2, ensure_ascii=False)
 
@@ -147,6 +162,13 @@ def to_markdown(result: ScanResult) -> str:
              f"{len(result.servers)} servers · {len(result.tools)} tool definitions · "
              f"{len(result.instruction_files)} instruction files", ""]
     findings = result.sorted_findings()
+    if result.overall:
+        o = result.overall
+        lines += [f"**Overall risk: {o['grade']} ({o['score']}/100)**", "",
+                  "| Grade | Score | Server / file | Top issues |", "|---|---|---|---|"]
+        lines += [f"| {s.grade} | {s.score} | `{s.subject}` | {', '.join(s.top[:3])} |"
+                  for s in result.scores if s.score > 0][:15]
+        lines.append("")
     if not findings:
         lines.append("No findings. ✅")
     else:
@@ -228,6 +250,7 @@ td code{{word-break:break-all}}ul{{padding-left:18px;color:var(--mut)}}
 <div class="tiles">{tiles}</div>
 <h2>Findings</h2>
 {''.join(rows) or '<div class="empty">No findings ✅</div>'}
+<h2>Risk</h2>{_risk_html(result)}
 <h2>Servers</h2><table>{servers or '<tr><td>No servers found</td></tr>'}</table>
 <h2>Engines</h2><ul>{engines or '<li>none</li>'}</ul>
 {'<h2>Errors</h2><ul>' + ''.join(f'<li>{esc(e)}</li>' for e in result.errors) + '</ul>' if result.errors else ''}
@@ -238,6 +261,21 @@ document.querySelectorAll('.tile').forEach(t=>t.addEventListener('click',()=>{{
  if(on)t.classList.add('on');const k=on?t.dataset.filter:null;
  document.querySelectorAll('details.f').forEach(d=>d.style.display=!k||d.dataset.sev===k?'':'none');}}));
 </script></body></html>"""
+
+
+def _risk_html(result: ScanResult) -> str:
+    esc = html.escape
+    if not result.scores:
+        return '<div class="empty">Nothing scored</div>'
+    color = {"A": "var(--info)", "B": "var(--low)", "C": "var(--med)", "D": "var(--high)", "F": "var(--crit)"}
+    o = result.overall
+    rows = "".join(
+        f'<tr><td><b style="color:{color[s.grade]}">{s.grade}</b></td><td>{s.score}</td>'
+        f'<td><div style="background:var(--line);border-radius:3px;height:8px;min-width:80px">'
+        f'<div style="width:{s.score}%;height:8px;border-radius:3px;background:{color[s.grade]}"></div></div></td>'
+        f'<td>{esc(s.subject)}</td><td>{esc(", ".join(s.top[:3]))}</td></tr>' for s in result.scores[:30])
+    return (f'<p>Overall <b style="color:{color[o["grade"]]}">{o["grade"]}</b> ({o["score"]}/100) · '
+            f'{o["at_risk"]} of {o["subjects"]} at risk</p><table>{rows}</table>')
 
 
 WRITERS = {"json": to_json, "sarif": to_sarif, "md": to_markdown, "markdown": to_markdown,
