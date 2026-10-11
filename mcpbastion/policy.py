@@ -36,6 +36,7 @@ class Policy:
     ignore: list[dict] = field(default_factory=list)
     severity_overrides: dict[str, Severity] = field(default_factory=dict)
     extra_injection_patterns: list[re.Pattern] = field(default_factory=list)
+    inline_ignores: bool = True
 
     @classmethod
     def load(cls, path: str | Path | None) -> "Policy":
@@ -61,6 +62,7 @@ class Policy:
                                 (data.get("severity_overrides") or {}).items()},
             extra_injection_patterns=[re.compile(p, re.I) for p in
                                       data.get("extra_injection_patterns", [])],
+            inline_ignores=bool(data.get("inline_ignores", True)),
         )
 
     # ------------------------------------------------------------------ checks

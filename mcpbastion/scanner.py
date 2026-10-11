@@ -29,6 +29,7 @@ class ScanOptions:
     source_dirs: list[Path] = field(default_factory=list)
     policy: Policy = field(default_factory=Policy)
     tools_file: Path | None = None       # offline: JSON dump of tools/list results
+    baseline: Path | None = None         # only report findings not in this baseline
     instructions: bool = True            # scan CLAUDE.md, AGENTS.md, rules, skills, agent settings
 
 
@@ -64,7 +65,9 @@ def scan(opts: ScanOptions) -> ScanResult:
     skill_dirs: list[Path] = []
     if opts.instructions:
         roots = [p for p in paths if p.is_dir()] if paths else [Path(opts.project_dir or Path.cwd())]
-        ins = instructions.scan(roots, include_user=not paths, extra_files=instr_files)
+        ins = instructions.scan(roots, include_user=not paths, extra_files=instr_files,
+                                inline_ignores=opts.policy.inline_ignores)
+        result.inline_suppressed = ins.inline_suppressed
         result.add(ins.findings)
         result.errors += ins.errors
         result.instruction_files = [t.display for t in ins.targets]
@@ -101,6 +104,9 @@ def scan(opts: ScanOptions) -> ScanResult:
 
     # ---------------- policy
     result.findings, result.suppressed = opts.policy.apply(result.findings)
+    if opts.baseline:
+        from . import baseline
+        result.findings, result.baselined = baseline.apply(result.findings, baseline.load(opts.baseline))
     return result
 
 
@@ -132,6 +138,8 @@ def _tool_checks(result: ScanResult, tools: list[ToolInfo], servers: list[Server
                                 f"'{pat.pattern}'.", location=f"{t.kind}:{t.name}",
                                 evidence=m.group(0)))
     result.add(tool_rules.check_collisions(tools))
+    from .rules.impersonation import check_lookalike_collisions
+    result.add(check_lookalike_collisions(tools))
     # toxic flows are evaluated per client (one agent = one client config)
     clients: dict[str, set[str]] = defaultdict(set)
     for s in servers:

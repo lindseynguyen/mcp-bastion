@@ -45,7 +45,7 @@ pipx install semgrep                   # optional: code rules (keep it in its ow
 pip install "mcp-bastion[ml]"          # optional: LLM Guard classifier (~2 GB)
 ```
 
-Until the first PyPI release: `pip install "mcp-bastion[engines] @ git+https://github.com/lindseynguyen/mcp-bastion@v0.2.0"`.
+Until the first PyPI release: `pip install "mcp-bastion[engines] @ git+https://github.com/lindseynguyen/mcp-bastion@v0.3.0"`.
 
 ## Use
 
@@ -116,6 +116,13 @@ tables are not shell pipes, and well-known installers (`astral.sh`, `bun.sh`, ru
 allowed. Run against the agent files of openai/codex, microsoft/vscode, vercel/next.js,
 modelcontextprotocol/python-sdk, fastmcp and claude-code-action (66 files): no medium-or-higher finding.
 
+**Impersonation** — `npx -y @modelcontextprotoco1/server-github` runs whatever that
+look-alike scope publishes. Launched npm/PyPI packages are compared with ~80 widely used MCP
+servers: look-alike scopes, an official name re-published under another scope or without
+one, digit/letter swaps (`fi1esystem`), Cyrillic/Greek homoglyphs and one-character typos
+(MB206). Tool names with non-Latin look-alike letters, and tools on different servers whose
+names *look* identical (`send_email` vs `send_emаil`), are flagged too (MB512).
+
 **Rug pulls** — `--lock FILE` stores a SHA-256 of every tool; changed, new and removed
 tools are reported until you re-pin with `--update-lock`.
 
@@ -131,6 +138,38 @@ tools are reported until you re-pin with `--update-lock`.
 | [LLM Guard](https://github.com/protectai/llm-guard) | Local DeBERTa prompt-injection classifier for paraphrased attacks regexes miss | MB511 |
 
 An engine that is missing is skipped; one that crashes is reported and never stops the scan.
+
+## Adopting it on an existing project
+
+```bash
+mcp-bastion scan . --write-baseline .mcp-bastion-baseline.json   # accept what exists today
+mcp-bastion scan . --baseline .mcp-bastion-baseline.json         # CI: fail only on new findings
+```
+
+Fingerprints ignore line numbers, so edits around a finding do not bring it back.
+In instruction files a reviewed line can be marked on the line itself or the line above:
+
+```markdown
+<!-- mcp-bastion-ignore[MB1104] installer reviewed 2026-10 -->
+curl -fsSL https://tools.internal.example/setup.sh | bash
+```
+
+CRITICAL findings are never hidden by a baseline or an inline marker — an attacker writing
+a poisoned `CLAUDE.md` can add markers too. Suppressed counts are always printed, and
+`inline_ignores: false` in the policy turns markers off (use it when vetting third-party repos).
+
+### pre-commit
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/lindseynguyen/mcp-bastion
+    rev: v0.3.0
+    hooks:
+      - id: mcp-bastion
+```
+
+Runs offline in about a second, only when an MCP config or agent instruction file changes.
 
 ## Policy
 
@@ -166,7 +205,7 @@ Findings appear in the Security tab and as a job summary.
 ## Rules
 
 `mcp-bastion rules` prints the full catalogue. Families: **MB1xx** secrets,
-**MB2xx** supply chain, **MB3xx** execution & privilege, **MB4xx** transport, auth &
+**MB2xx** supply chain and typosquats, **MB3xx** execution & privilege, **MB4xx** transport, auth &
 shadow servers, **MB5xx** tool poisoning, **MB6xx** capabilities & toxic flows,
 **MB7xx** rug pulls, **MB8xx** server source code, **MB9xx** scanner status,
 **MB11xx** agent instruction files and agent settings.

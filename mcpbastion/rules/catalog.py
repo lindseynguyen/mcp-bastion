@@ -73,6 +73,10 @@ _RULES = [
     Rule("MB204", "Package installed from an untrusted or direct URL", Severity.HIGH,
          "Install from the official registry with a pinned version, or vendor and review the code.",
          ("MCP04",), ("ASI04",), "supply-chain"),
+    Rule("MB206", "Package name imitates a well-known MCP server", Severity.HIGH,
+         "Check the exact package name and publisher on the registry before running it; "
+         "typosquats and look-alike scopes are a common supply-chain attack.",
+         ("MCP04", "MCP09"), ("ASI04",), "supply-chain"),
     Rule("MB205", "Known vulnerability or malicious package (OSV)", Severity.HIGH,
          "Upgrade to a fixed version or remove the server. Malicious (MAL-) entries must be "
          "removed immediately and the host investigated.",
@@ -146,6 +150,10 @@ _RULES = [
     Rule("MB510", "Tool metadata asks to hide actions from the user", Severity.CRITICAL,
          "Instructions to keep actions secret are a strong sign of malicious intent.",
          ("MCP03", "MCP06"), ("ASI09", "ASI01"), "tool"),
+    Rule("MB512", "Look-alike (homoglyph) tool name", Severity.HIGH,
+         "Tool names should be plain ASCII. A name that looks like another server's tool lets "
+         "a malicious server intercept calls meant for the trusted one.",
+         ("MCP03", "MCP09"), ("ASI02", "ASI04"), "tool"),
     Rule("MB511", "ML prompt-injection classifier flagged tool metadata", Severity.HIGH,
          "Review the flagged text; the classifier score is attached as evidence.",
          ("MCP03", "MCP06"), ("ASI01",), "tool"),

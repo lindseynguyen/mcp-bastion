@@ -257,6 +257,8 @@ def check_tool(tool: ToolInfo, other_tool_names: set[str] | None = None) -> list
                       location=loc, evidence=tool.description[:160]))
 
     f += _hidden_params(tool, loc)
+    from .impersonation import check_tool_name
+    f += check_tool_name(tool)
     return f
 
 

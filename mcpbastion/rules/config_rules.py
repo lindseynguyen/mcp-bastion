@@ -13,6 +13,7 @@ from .. import secrets as sec
 from ..launch import Launch, analyse
 from ..models import Finding, ServerConfig, Severity
 from .catalog import make
+from .impersonation import check_package
 
 DOWNLOAD_EXEC = re.compile(
     r"(?:curl|wget|iwr|invoke-webrequest|irm|invoke-restmethod)\b[^|;&]*\|\s*(?:sudo\s+)?"
@@ -143,6 +144,7 @@ def check_server(srv: ServerConfig, launch: Launch | None = None) -> list[Findin
 
     # ---- supply chain
     for pkg in launch.packages:
+        f += check_package(pkg, s, loc)
         if pkg.source in ("url", "git"):
             f.append(make("MB204", s, f"{pkg.ecosystem} package installed from {pkg.source}: {pkg.raw}",
                           location=loc, evidence=pkg.raw))

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-bastion"
-version = "0.2.0"
+version = "0.3.0"
 description = "Offline security scanner for MCP servers and AI-agent tools: tool poisoning, rug pulls, secrets, supply chain and code flaws, mapped to OWASP MCP Top 10 and OWASP Agentic Top 10"
 readme = "README.md"
 license = { text = "MIT" }

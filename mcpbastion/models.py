@@ -127,6 +127,8 @@ class ScanResult:
     integrations: dict[str, str] = field(default_factory=dict)   # name -> status
     instruction_files: list[str] = field(default_factory=list)
     suppressed: int = 0
+    inline_suppressed: int = 0
+    baselined: int = 0
 
     def add(self, findings: list[Finding] | Finding) -> None:
         items = [findings] if isinstance(findings, Finding) else findings

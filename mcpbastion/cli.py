@@ -52,6 +52,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="server source folder to scan with code engines (repeatable)")
     s.add_argument("--engines", default="all",
                    help="comma list of engines to use, 'all' (default) or 'none'")
+    s.add_argument("--baseline", type=Path, metavar="FILE",
+                   help="only report findings that are not in this baseline file")
+    s.add_argument("--write-baseline", type=Path, metavar="FILE",
+                   help="accept the current findings: write them to a baseline file (CRITICAL is never baselined)")
     s.add_argument("--no-instructions", action="store_true",
                    help="skip agent instruction files (CLAUDE.md, AGENTS.md, rules, skills, agent settings)")
     s.add_argument("--policy", type=Path, help="policy file (YAML or JSON)")
@@ -112,8 +116,12 @@ def cmd_scan(args) -> int:
                        include_disabled=args.include_disabled, servers=args.server,
                        lockfile=args.lock, update_lock=args.update_lock, integrations=engines,
                        source_dirs=args.source, policy=policy, tools_file=args.tools_file,
-                       instructions=not args.no_instructions)
+                       instructions=not args.no_instructions, baseline=args.baseline)
     result = scan(opts)
+    if args.write_baseline:
+        from . import baseline
+        n = baseline.write(args.write_baseline, result.findings)
+        print(f"baseline written: {args.write_baseline} ({n} findings accepted)", file=sys.stderr)
 
     if args.format == "console":
         report.console(result, verbose=args.verbose, min_sev=args.min_severity)

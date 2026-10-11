@@ -32,6 +32,10 @@ ignore:
     server: "internal-*"
     reason: "Auth enforced by the LiteLLM gateway in front of these servers"
 
+# Honour `mcp-bastion-ignore[...]` markers in instruction files (never for CRITICAL).
+# Set to false when vetting repositories you do not control.
+inline_ignores: true
+
 # Extra phrases that must never appear in tool metadata
 extra_injection_patterns:
   - "(?i)forward .* to .*@"

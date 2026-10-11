@@ -1,0 +1,18 @@
+# Use from another repo's .pre-commit-config.yaml:
+#   - repo: https://github.com/lindseynguyen/mcp-bastion
+#     rev: v0.3.0
+#     hooks:
+#       - id: mcp-bastion
+- id: mcp-bastion
+  name: mcp-bastion (MCP configs and agent instruction files)
+  description: Blocks commits that add poisoned agent instructions, risky MCP servers or leaked secrets.
+  entry: mcp-bastion scan . --engines none --fail-on high
+  language: python
+  additional_dependencies: ["pyyaml>=6"]
+  pass_filenames: false
+  files: (?x)(^|/)(
+      CLAUDE(\.local)?\.md|AGENTS?\.md|GEMINI\.md|CONVENTIONS\.md|SKILL\.md|
+      \.cursorrules|\.windsurfrules|\.clinerules|\.roorules|\.goosehints|
+      \.mcp\.json|mcp\.json|mcp_config\.json|settings(\.local)?\.json|tasks\.json|config\.toml|
+      .*\.mdc|.*\.instructions\.md|.*\.prompt\.md|.*\.chatmode\.md
+    )$|(^|/)\.(claude|cursor|windsurf|clinerules|roo|continue|kiro|github|vscode|codex|gemini)/

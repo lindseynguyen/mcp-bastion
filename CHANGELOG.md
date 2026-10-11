@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0] - 2026-10-11
+
+### Added
+- **Typosquat / look-alike package detection** (MB206): look-alike scopes, official package
+  names re-published under another scope or none, digit and homoglyph swaps, one-character
+  typos, against ~80 widely used MCP servers (npm and PyPI, PEP 503 aware).
+- **Homoglyph tool names** (MB512): non-Latin look-alike letters in tool names, and tools on
+  different servers whose names look identical.
+- **Baselines**: `--write-baseline` / `--baseline` to report only new findings; line-independent
+  fingerprints; CRITICAL is never baselined.
+- **Inline ignores** in instruction files: `mcp-bastion-ignore[MB1104]`; never applies to CRITICAL;
+  `inline_ignores: false` policy switch; suppressed counts shown in every report.
+- **pre-commit hook** (`.pre-commit-hooks.yaml`).
+
 ## [0.2.0] - 2026-10-11
 
 ### Added

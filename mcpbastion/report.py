@@ -55,8 +55,11 @@ def console(result: ScanResult, stream=None, verbose: bool = False, min_sev: Sev
             w(f"      OWASP: {', '.join(f.owasp_mcp + f.owasp_asi)}  [{f.source}]\n")
     counts = result.counts()
     w("\n" + "  ".join(c(Severity[k.upper()], f"{k}: {v}") for k, v in counts.items()))
-    if result.suppressed:
-        w(f"  (suppressed by policy: {result.suppressed})")
+    hidden = [f"policy {result.suppressed}" if result.suppressed else "",
+              f"inline {result.inline_suppressed}" if result.inline_suppressed else "",
+              f"baseline {result.baselined}" if result.baselined else ""]
+    if any(hidden):
+        w("  (not shown: " + ", ".join(h for h in hidden if h) + ")")
     w("\n")
     if result.integrations:
         w("engines: " + "; ".join(f"{k} {v}" for k, v in result.integrations.items()) + "\n")
@@ -68,6 +71,7 @@ def to_json(result: ScanResult) -> str:
         "tool": "mcp-bastion", "version": __version__,
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "summary": result.counts(), "suppressed": result.suppressed,
+        "inline_suppressed": result.inline_suppressed, "baselined": result.baselined,
         "integrations": result.integrations, "errors": result.errors,
         "servers": [{"name": s.name, "client": s.client, "config": s.config_path,
                      "transport": s.transport, "command": scrub(s.command_line())} for s in result.servers],

@@ -52,6 +52,24 @@ class InstructionScan:
     findings: list[Finding] = field(default_factory=list)
     skill_dirs: list[Path] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    inline_suppressed: int = 0
+
+
+INLINE_IGNORE = re.compile(r"mcp-bastion-ignore(?:\[\s*([A-Za-z0-9,\s]+?)\s*\])?")
+
+
+def _inline_ignores(text: str) -> dict[int, set[str] | None]:
+    """line -> rule ids (None = all) for `mcp-bastion-ignore[MB1104]` markers. A marker covers
+    its own line and the next one."""
+    out: dict[int, set[str] | None] = {}
+    for i, line in enumerate(text.splitlines(), 1):
+        m = INLINE_IGNORE.search(line)
+        if m:
+            rules = {r.strip().upper() for r in m.group(1).split(",")} if m.group(1) else None
+            for n in (i, i + 1):
+                prev = out.get(n, set())
+                out[n] = None if (rules is None or prev is None) else prev | rules
+    return out
 
 
 def _display(path: Path, root: Path, scope: str) -> str:
@@ -140,8 +158,8 @@ def is_instruction_file(path: Path) -> bool:
 
 # --------------------------------------------------------------------- scan
 
-def scan(roots: list[Path], include_user: bool = False, extra_files: list[Path] | None = None
-         ) -> InstructionScan:
+def scan(roots: list[Path], include_user: bool = False, extra_files: list[Path] | None = None,
+         inline_ignores: bool = True) -> InstructionScan:
     out = InstructionScan()
     out.targets = discover(roots + list(extra_files or []), include_user)
     skill_dirs = set()
@@ -159,6 +177,17 @@ def scan(roots: list[Path], include_user: bool = False, extra_files: list[Path] 
             out.findings += check_settings(t, text)
             continue
         found = check_text(text, t.display, "script" if t.kind == "script" else "instructions")
+        if inline_ignores and "mcp-bastion-ignore" in text:
+            marks = _inline_ignores(text)
+            kept = []
+            for f in found:
+                rules = marks.get(f.line or -1, set())
+                # CRITICAL is never suppressible inline: an attacker controls this file too
+                if f.severity < Severity.CRITICAL and (rules is None or f.rule_id in rules):
+                    out.inline_suppressed += 1
+                else:
+                    kept.append(f)
+            found = kept
         if t.scope == "user":
             for f in found:            # the user's own files: still report, one notch lower
                 if f.severity > Severity.INFO and f.rule_id not in ("MB1102", "MB1103"):
