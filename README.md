@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 [![OWASP MCP Top 10](https://img.shields.io/badge/OWASP-MCP%20Top%2010-black.svg)](#rules)
-[![LLM Red-Team Starter Kit](https://img.shields.io/badge/LLM%20Red--Team-Starter%20Kit-ff90e8.svg)](https://techsavant013.gumroad.com/l/llm-redteam-starter-kit?utm_source=github&utm_medium=readme&utm_campaign=mcp-bastion)
+[![MCP & AI Agent Security Test Pack](https://img.shields.io/badge/MCP%20%26%20AI%20Agent-Security%20Test%20Pack-ff90e8.svg)](https://techsavant013.gumroad.com/l/mcp-agent-security-test-pack?utm_source=github&utm_medium=readme&utm_campaign=mcp-bastion)
 
 **Offline security scanner for MCP servers and AI-agent tools.** It finds tool
 poisoning, hidden instructions, rug pulls, leaked secrets, risky launch commands,
@@ -276,7 +276,7 @@ shadow servers, **MB5xx** tool poisoning, **MB6xx** capabilities & toxic flows,
 ## Related
 
 - [llm-redteam-canary-tests](https://github.com/lindseynguyen/llm-redteam-canary-tests) — 10 harmless canary tests for LLM apps, mapped to the OWASP LLM Top 10
-- **[LLM Red-Team Starter Kit](https://techsavant013.gumroad.com/l/llm-redteam-starter-kit?utm_source=github&utm_medium=readme&utm_campaign=mcp-bastion)** — test plans and report templates to go from scan results to a full AI security assessment
+- **[MCP & AI Agent Security Test Pack 2026](https://techsavant013.gumroad.com/l/mcp-agent-security-test-pack?utm_source=github&utm_medium=readme&utm_campaign=mcp-bastion)** — 40 OWASP Agentic/MCP test cases, Excel tracker, PDF field guide and a Python canary lab to go from scan results to a full agent security assessment
 
 ## License
 
